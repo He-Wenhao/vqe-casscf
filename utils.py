@@ -1,3 +1,20 @@
+import pennylane as qml
+from pennylane import numpy as pnp
+import numpy as np
+from openfermion import InteractionOperator, get_fermion_operator
+from openfermion.transforms import jordan_wigner
+from openfermion.linalg import get_sparse_operator
+from itertools import product
+from pennylane.qchem import hf_state, excitations
+from pyscf import gto, scf, mcscf
+from pyscf.fci.direct_spin1 import FCI as DirectSpinFCI
+import matplotlib.pyplot as plt
+from pathlib import Path
+import scipy
+from pyscf.fci import cistring
+from pyscf import fci
+from math import comb
+
 def parity_from_occ(occ):
     """Return permutation parity (+1 or -1) from occupation string when sorting by spin label."""
     # Step 1: Convert to spin labels
