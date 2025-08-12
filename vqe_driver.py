@@ -245,7 +245,6 @@ def perm_orca2pyscf(**kargs):
         perm_mat = direct_sum(perm_mat,perm_block[l_val])
     return perm_mat
 
-# Single-shot VQE evaluation
 def ucc_ansatz_eval(mol, mo_guess, ncas, nelecas, label="", solver='VQE', vqe_params=None):
     if solver.upper() != 'VQE':
         raise ValueError("Only VQE solver is supported in this clean version")
@@ -264,7 +263,6 @@ def ucc_ansatz_eval(mol, mo_guess, ncas, nelecas, label="", solver='VQE', vqe_pa
         n_electrons = nelecas
     
     # Single-shot evaluation
-    from itertools import product
     
     # Add spin
     def add_spin_1bd(m):
