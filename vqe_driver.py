@@ -6,7 +6,7 @@ from openfermion.transforms import jordan_wigner
 from openfermion.linalg import get_sparse_operator
 from itertools import product
 from pennylane.qchem import hf_state, excitations
-from pyscf import gto, scf, mcscf
+from pyscf import gto, scf, mcscf, fci
 from pyscf.fci.direct_spin1 import FCI as DirectSpinFCI
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -170,3 +170,39 @@ def run_vqe_cas(mol, mo_guess, ncas, nelecas, solver='VQE', mode='SCF'):
     if solver == 'FCI':
         mc.fcisolver.params = None
     return e_tot, mc.fcisolver.params, mo_coeff, ci_vec, mc
+
+def casscf_overlap(mc1, mc2):
+    """
+    Compute the overlap between two CASSCF wavefunctions.
+    
+    Args:
+        mc1: PySCF CASSCF object for wavefunction 1
+        mc2: PySCF CASSCF object for wavefunction 2
+        
+    Returns:
+        overlap: <Psi1 | Psi2>
+        infidelity: 1 - |<Psi1 | Psi2>|^2
+    """
+    mol = mc1.mol
+    assert mc1.ncas == mc2.ncas, "Active space size must match"
+    assert mc1.nelecas == mc2.nelecas, "Active electron count must match"
+    assert mol == mc2.mol, "Both wavefunctions must share the same molecule (AO basis)"
+    
+    # Extract CI and MO coefficients
+    ci1, ci2 = mc1.ci, mc2.ci
+    mo1, mo2 = mc1.mo_coeff, mc2.mo_coeff
+    ncas, nelecas = mc1.ncas, mc1.nelecas
+
+    # AO overlap matrix (shared AO basis)
+    S_ao = mol.intor('int1e_ovlp')
+    
+    # MO overlap in active space
+    mo1_act = mo1[:, mc1.ncore:mc1.ncore+ncas]
+    mo2_act = mo2[:, mc2.ncore:mc2.ncore+ncas]
+    S_mo = mo1_act.T @ S_ao @ mo2_act
+    
+    # CI overlap
+    overlap = fci.addons.overlap(ci1, ci2, ncas, nelecas, S_mo)
+    infidelity = 1 - abs(overlap)**2
+    
+    return infidelity
