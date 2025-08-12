@@ -190,10 +190,8 @@ def visualize_extended_scan(ts, energies, converged, E_hf_orig, E_nn_orig):
     plt.xlabel('Interpolation Parameter t')
     plt.ylabel('Relative Energy (Ha)')
     plt.title('Energy Relative to t=0 (HF)')
-    #plt.grid(True, alpha=0.3)
     plt.legend(loc='best')
     plt.tight_layout()
-    #plt.show()
     plt.savefig('figs/double_well.pdf', metadata={"TextAsShapes": False})
     
     return idx_min, idx_max
