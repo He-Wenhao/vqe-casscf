@@ -78,25 +78,6 @@ def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=T
     else:
         g_phys = g2
 
-    def add_spin_1bd(m):
-        dim = m.shape[0]
-        res = np.zeros((2*dim,2*dim))
-        for p, q in product(range(dim), repeat=2):
-            res[2*p, 2*q] = m[p,q]
-            res[2*p+1, 2*q+1] = m[p,q]
-        return res
-
-    def add_spin_2bd(g):
-        dim = g.shape[0]
-        res = np.zeros((2*dim,)*4)
-        for p, q, r, s in product(range(dim), repeat=4):
-            val = g[p,q,r,s]
-            if abs(val) < 1e-12:
-                continue
-            for σ1, σ2 in product(range(2), repeat=2):
-                res[2*p+σ1, 2*q+σ2, 2*r+σ2, 2*s+σ1] = val
-        return res / 2.0
-
     int1_spin = add_spin_1bd(h1)
     int2_spin = add_spin_2bd(g_phys)
 
