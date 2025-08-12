@@ -15,6 +15,8 @@ from pyscf.fci import cistring
 from pyscf import fci
 from math import comb
 
+from utils import *
+
 # Core VQE implementation
 def pennylane_vqe(H_const, h1, g2, nele, init_params=None):
     # Integrals
