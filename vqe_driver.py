@@ -6,7 +6,7 @@ from openfermion.transforms import jordan_wigner
 from openfermion.linalg import get_sparse_operator
 from itertools import product
 from pennylane.qchem import hf_state, excitations
-from pyscf import gto, scf, mcscf, fci
+from pyscf import gto, scf, mcscf
 from pyscf.fci.direct_spin1 import FCI as DirectSpinFCI
 import matplotlib.pyplot as plt
 from pathlib import Path
