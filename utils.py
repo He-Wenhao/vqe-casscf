@@ -111,3 +111,151 @@ def qubit_state_to_ci(wf_qubit, n_orb, nelec):
             ci[i, j] = s * wf_qubit[idx]
 
     return ci
+
+def extract_rdms_ao(mc):
+    """
+    Extract the 1-RDM and 2-RDM in AO basis from a CASSCF object.
+
+    Args:
+        mc: PySCF CASSCF object
+
+    Returns:
+        dm1_ao: 1-RDM in AO basis
+        dm2_ao: 2-RDM in AO basis (chemist's notation: (pq|rs))
+    """
+    ci = mc.ci
+    ncas = mc.ncas
+    nelecas = mc.nelecas
+    mo = mc.mo_coeff
+    mo_act = mo[:, mc.ncore:mc.ncore+ncas]
+
+    # 1- and 2-RDMs in the active space
+    dm1_cas, dm2_cas = fci.direct_spin1.make_rdm12(ci, ncas, nelecas)
+
+    # Transform 1-RDM to AO basis
+    dm1_ao = mo_act @ dm1_cas @ mo_act.T
+
+    # Transform 2-RDM to AO basis
+    # (pq|rs) = ∑_{ijkl} C_{pi} C_{qj} C_{rk} C_{sl} * dm2_ijkl
+    C = mo_act
+    dm2_ao = np.einsum('pi,qj,rk,sl,ijkl->pqrs',
+                       C, C, C, C, dm2_cas, optimize=True)
+
+    return dm1_ao, dm2_ao
+
+def compare_rdms_ao(mc1, mc2):
+    """
+    Compare 1-RDM and 2-RDM in AO basis between two CASSCF wavefunctions.
+
+    Args:
+        mc1, mc2: PySCF CASSCF objects
+
+    Returns:
+        dm1_ao_1, dm1_ao_2, dm2_ao_1, dm2_ao_2
+    """
+    dm1_ao_1, dm2_ao_1 = extract_rdms_ao(mc1)
+    dm1_ao_2, dm2_ao_2 = extract_rdms_ao(mc2)
+
+    # Frobenius norm of difference
+    diff_dm1 = np.linalg.norm(dm1_ao_1 - dm1_ao_2)
+    diff_dm2 = np.linalg.norm(dm2_ao_1 - dm2_ao_2)
+
+    print("1-RDM AO difference (Frobenius norm):", diff_dm1)
+    print("2-RDM AO difference (Frobenius norm):", diff_dm2)
+
+    return dm1_ao_1, dm1_ao_2, dm2_ao_1, dm2_ao_2
+
+
+def energy_from_ao_rdm(mol, dm1_ao, dm2_ao):
+    """
+    Compute total electronic energy from 1-RDM and 2-RDM in AO basis.
+
+    Args:
+        mol: PySCF Mole object
+        dm1_ao: 1-RDM in AO basis (shape [n_ao, n_ao])
+        dm2_ao: 2-RDM in AO basis (shape [n_ao, n_ao, n_ao, n_ao])
+
+    Returns:
+        total_energy: float, total electronic energy in Hartree
+    """
+    # One-electron AO integrals (T + V)
+    h1_ao = mol.intor('int1e_kin') + mol.intor('int1e_nuc')
+
+    # Two-electron AO integrals (physicist's notation)
+    eri_ao = mol.intor('int2e')  # (μν|λσ)
+
+    # Energy contributions
+    e1 = np.einsum('pq,qp->', h1_ao, dm1_ao)  # Tr[h * D]
+    e2 = 0.5 * np.einsum('pqrs,pqrs->', eri_ao, dm2_ao)
+
+    return e1 + e2 + mol.energy_nuc()
+
+# Extract active space integrals
+def get_active_space_integrals(mol, mo_coeff, ncas, nelecas):
+    # Get AO integrals
+    h_ao = mol.intor('int1e_kin') + mol.intor('int1e_nuc')
+    eri_ao = mol.intor('int2e')
+    
+    # Extract active space MOs (assuming they are the first ncas orbitals)
+    mo_cas = mo_coeff[:, :ncas]
+    
+    # Transform to active space
+    h1e = mo_cas.T @ h_ao @ mo_cas
+    
+    # Two-electron integrals in chemist notation (11|22)
+    g2e = np.einsum('pqrs,pi,qj,rk,sl->ijkl', eri_ao, mo_cas, mo_cas, mo_cas, mo_cas)
+    
+    return h1e, g2e
+
+
+# Orthogonalize MO coefficients with respect to overlap matrix S
+def orthogonalize_mo_gram_schmidt(mo, S):
+    n_aos, n_mos = mo.shape
+    mo_orth = mo.copy()
+    
+    for i in range(n_mos):
+        # Normalize
+        norm = np.sqrt(mo_orth[:, i].T @ S @ mo_orth[:, i])
+        mo_orth[:, i] /= norm
+        
+        # Orthogonalize against previous vectors
+        for j in range(i+1, n_mos):
+            overlap = mo_orth[:, i].T @ S @ mo_orth[:, j]
+            mo_orth[:, j] -= overlap * mo_orth[:, i]
+    
+    return mo_orth
+
+
+# Orbital interpolation using Cayley transform
+def interpolate_mo_cayley(mo1, mo2, t, S=None):
+    if t == 0.0:
+        return mo1.copy()
+    elif t == 1.0:
+        return mo2.copy()
+    
+    # Compute rotation matrix
+    if S is not None:
+        R = mo1.T @ S @ mo2
+    else:
+        R = mo1.T @ mo2
+    
+    I = np.eye(R.shape[0])
+    
+
+    # Fallback to eigenvalue interpolation
+    eigvals, eigvecs = np.linalg.eig(R)
+    angles = np.angle(eigvals)
+    angles_t = t * angles
+    R_t = np.real(eigvecs @ np.diag(np.exp(1j * angles_t)) @ eigvecs.conj().T)
+    
+    # Apply rotation
+    mo_t = mo1 @ R_t
+    
+    # Ensure orthonormality
+    if S is not None:
+        mo_t = orthogonalize_mo_gram_schmidt(mo_t, S)
+    else:
+        Q, _ = np.linalg.qr(mo_t)
+        mo_t = Q
+    
+    return mo_t
