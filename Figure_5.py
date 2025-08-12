@@ -109,7 +109,7 @@ print(f"Energy from NN-init RDMs: {e_nn:.12f} Ha")
 print(f"Energy from HF-init RDMs: {e_hf:.12f} Ha")
 print(f"ΔE = {e_nn - e_hf:.6e} Ha")
 
-"""========Figure 4 Scanning Function========"""
+"""========Figure 5 Scanning Function========"""
 # Main scanning function
 def extended_vqe_optimization_scan(mol, mo1, mo2, params1, params2, ncas, nelecas, t_min=-0.3, t_max=1.3, n_points=21):
     S = mol.intor("int1e_ovlp")
