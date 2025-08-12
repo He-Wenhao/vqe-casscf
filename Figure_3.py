@@ -19,7 +19,6 @@ from numpy.linalg import eigh, inv
 
 from utils import *
 from vqe_driver import *
-from downfolding_methods_pytorch import perm_orca2pyscf
 
 d_1 = 0.7
 pos = [[0,0,0], [d_1,0,0], [2*d_1,0,0], [3*d_1,0,0]]
