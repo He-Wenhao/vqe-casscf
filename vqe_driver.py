@@ -76,8 +76,6 @@ def pennylane_vqe(H_const, h1, g2, nele, init_params=None):
 
     # initialise parameters
     if init_params is None:
-        #np.random.seed(0)
-        #params = pnp.random.normal(0, 0.01, n_params, requires_grad=True)
         params = pnp.zeros(n_params, requires_grad=True)
     else:
         params = pnp.array(init_params, requires_grad=True)
