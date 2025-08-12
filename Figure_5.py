@@ -125,42 +125,18 @@ def extended_vqe_optimization_scan(mol, mo1, mo2, params1, params2, ncas, neleca
     print("-" * 40)
     
     for i, t in enumerate(ts):
-        # Interpolate orbitals
         mo_t = interpolate_mo_cayley(mo1, mo2, t, S)
-        #mo_t = mo1
 
         params_init = (1 - t) * params1 + t * params2
-        #params_init = params1
-        # Initial guess for parameters
-        #if t < 0:
-        #    params_init = (1 - 2*abs(t)) * params1 + 2*abs(t) * np.zeros_like(params1)
-        #elif t > 1:
-        #    params_init = (2 - t) * params2 + (t - 1) * np.zeros_like(params2)
-        #else:
-        #    params_init = (1 - t) * params1 + t * params2
         
         print(f"\nOptimizing at t={t:.4f}...")
         
-        #try:
-            # Full VQE optimization
-        #e_tot, params_final, _, _, _ = run_vqe_cas(mol, mo_t, ncas, nelecas,mode='CI')
-        #    energies_opt.append(e_tot)
-        #    params_opt.append(params_final)
-        #    converged.append(True)
-        #    status = "Converged"
-        #except Exception as e:
-        #    print(f"  Warning: Optimization failed at t={t:.2f}: {str(e)}")
-            # Use single-shot energy with interpolated params as fallback
-        _, _, _, e_tot = run_casscf_with_guess(
+        _, _, _, e_tot = ucc_ansatz_eval(
             mol, mo_t, ncas, nelecas,
             solver='VQE', vqe_params=params_init
         )
         energies_opt.append(e_tot)
-        #    params_opt.append(params_init)
         converged.append(True)
-        #    status = "Failed"
-        
-        #print(f"{t:5.2f}   {energies_opt[-1]:12.8f}   {status}")
     
     return ts, np.array(energies_opt), params_opt, converged
 
@@ -192,37 +168,7 @@ def visualize_extended_scan(ts, energies, converged, E_hf_orig, E_nn_orig):
     print(f"Global maximum: {energies[idx_max]:.8f} Ha at t={ts[idx_max]:.2f}")
     barrier = (energies[idx_max] - energies[idx_min]) * 627.509
     print(f"Barrier height: {barrier:.2f} kcal/mol")
-    '''
-    # ==========================
-    # Figure 1: Energy Surface
-    # ==========================
-    plt.figure(figsize=(10, 5))
-    plt.plot(ts[converged], energies[converged], 'go-', label='Optimized VQE')
-    if np.any(~converged):
-        plt.plot(ts[~converged], energies[~converged], 'rx', label='Failed optimization')
-
-    # Highlight regions
-    plt.axvspan(t_min, 0, color='blue', alpha=0.1, label='HF extrapolation')
-    plt.axvspan(0, 1, color='green', alpha=0.1, label='Interpolation region')
-    plt.axvspan(1, t_max, color='red', alpha=0.1, label='NN extrapolation')
-
-    # Reference lines
-    plt.axhline(E_hf_orig, color='blue', linestyle=':', label='Original HF')
-    plt.axhline(E_nn_orig, color='red', linestyle=':', label='Original NN')
-    plt.axvline(0, color='gray', linestyle='--', alpha=0.5)
-    plt.axvline(1, color='gray', linestyle='--', alpha=0.5)
-
-    plt.ylabel('Energy (Ha)')
-    plt.xlabel('Interpolation Parameter t')
-    plt.title('Extended VQE Energy Surface')
-    plt.legend(loc='best')
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
-    '''
-    # ==========================
-    # Figure 2: Relative Energy (kcal/mol)
-    # ==========================
+    
     print("Warning: set E_ref manually")
     E_ref = -2.0140511195198982
     rel = (energies - E_ref) 
