@@ -94,7 +94,6 @@ def pennylane_vqe(H_const, h1, g2, nele, init_params=None):
     ################################
     ## implementation of ci_vec
     ################################
-    #raise NotImplementedError("ci_vec not defined.")
     @qml.qnode(dev, interface="autograd")
     def _state_qnode(params):
         ansatz(params)
@@ -143,8 +142,6 @@ class PennyLaneSolver:
         E, p, ci_vec = pennylane_vqe(H_const, h1e, g2e, nele, init_params=self.params)
         self.params = p
 
-        # classical FCI for CI vector & RDM
-        #e2, ci_vec = self.classical.kernel(h1e, g2e, norb, nelec, ci0=ci0, verbose=verbose, max_memory=max_memory, ecore=ecore, **kwargs)
         return E, ci_vec
 
     def make_rdm12(self, ci_vec, ncas, nelecas):
@@ -165,8 +162,6 @@ def run_vqe_cas(mol, mo_guess, ncas, nelecas, solver='VQE', mode='SCF'):
         mc.fcisolver = PennyLaneSolver(mf_init)
     else:
         assert solver == 'FCI'
-    #mc.max_cycle = 1
-    #mc.conv_tol_grad = 1.0
 
     e_tot, e_cas, ci_vec, mo_coeff, mo_energy = mc.kernel()
     if solver == 'FCI':
@@ -251,7 +246,7 @@ def perm_orca2pyscf(**kargs):
     return perm_mat
 
 # Single-shot VQE evaluation
-def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label="", solver='VQE', vqe_params=None):
+def ucc_ansatz_eval(mol, mo_guess, ncas, nelecas, label="", solver='VQE', vqe_params=None):
     if solver.upper() != 'VQE':
         raise ValueError("Only VQE solver is supported in this clean version")
     
