@@ -104,8 +104,8 @@ def calc_basisNN_inp_file(inp_data):
     n_atoms = len(atoms)
     ncas, nelecas = n_atoms, n_atoms
     
-    # Use run_cas function but invoke FCI solver
-    E, _, mo_coeff, ci_vec, mc = run_cas(mol, mo_guess, ncas, nelecas, solver='FCI')
+    # Use run_vqe_cas function but invoke FCI solver
+    E, _, mo_coeff, ci_vec, mc = run_vqe_cas(mol, mo_guess, ncas, nelecas, solver='FCI')
     
     #L1 norm
     l = np.sum(np.abs(mc.mo_coeff))
