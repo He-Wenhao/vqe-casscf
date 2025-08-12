@@ -38,8 +38,7 @@ conda env create -f environment.yml
 
 ## Tests
 
-* code for figure 1: ```**.py```
-* code for figure 2:```**.py```
-* code for figure 3:```**.py```
-* code for figure 4:```**.py```
-* code for figure 5:```**.py```
+* code for figure 2:```Figure_2.py```
+* code for figure 3:```Figure_3.py```
+* code for figure 4:```Figure_4.py```
+* code for figure 5:```Figure_5.py```
