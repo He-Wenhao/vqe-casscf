@@ -9,7 +9,7 @@ import re
 import glob
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from vqe_driver import PennyLaneSolver, perm_orca2pyscf, run_casscf_with_guess
+from vqe_driver import PennyLaneSolver, perm_orca2pyscf, ucc_ansatz_eval
 
 def process_index(ind):
     pos = pos_l[ind]
@@ -45,9 +45,8 @@ def process_index(ind):
     mf_hf.kernel()
     hf_orbitals = mf_hf.mo_coeff
 
-    # Run CASSCFs
-    run_casscf_with_guess(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
-    run_casscf_with_guess(mol, hf_orbitals, ncas=4, nelecas=4, label="HF")
+    ucc_ansatz_eval(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
+    ucc_ansatz_eval(mol, hf_orbitals, ncas=4, nelecas=4, label="HF")
 
     sys.stdout.close()
     sys.stdout = sys.__stdout__
