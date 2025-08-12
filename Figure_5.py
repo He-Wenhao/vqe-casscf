@@ -20,7 +20,6 @@ import matplotlib as mpl
 
 from utils import *
 from vqe_driver import *
-from downfolding_methods_pytorch import perm_orca2pyscf
 
 
 d = 2.3
