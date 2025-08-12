@@ -15,6 +15,14 @@ from pyscf.fci import cistring
 from pyscf import fci
 from math import comb
 
+def setup_molecule(d=2.3):
+    pos = [[0,0,0], [d,0,0], [2*d,0,0], [3*d,0,0]]
+    elements = ["H", "H", "H", "H"]
+    atom = [[el, tuple(c)] for el, c in zip(elements, pos)]
+    mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=0)
+    
+    return mol, atom
+
 def parity_from_occ(occ):
     """Return permutation parity (+1 or -1) from occupation string when sorting by spin label."""
     # Step 1: Convert to spin labels
