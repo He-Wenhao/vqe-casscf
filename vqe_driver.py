@@ -209,6 +209,47 @@ def casscf_overlap(mc1, mc2):
     
     return infidelity
 
+def perm_orca2pyscf(**kargs):
+    mol = gto.M(**kargs)
+    mol.verbose = 0
+    def direct_sum(A, B):
+        if type(A) == str:
+            return B
+        if type(B) == str:
+            return A
+        result = np.zeros((A.shape[0] + B.shape[0], A.shape[1] + B.shape[1]))
+        result[:A.shape[0], :A.shape[1]] = A
+        result[A.shape[0]:, A.shape[1]:] = B
+        return result
+    
+    perm_block = {
+        's':np.array([[1]]),
+        'p':np.array([
+                    [0,1,0],
+                    [0,0,1],
+                    [1,0,0]]),
+        'd':np.array([
+                    [0,0,0,0,1],
+                    [0,0,1,0,0],
+                    [1,0,0,0,0],
+                    [0,1,0,0,0],
+                    [0,0,0,1,0]]),
+        }
+    ind = 0
+    perm_mat = 'None'
+    while ind < len(mol.ao_labels()):
+        l_val = mol.ao_labels()[ind][5]
+        if l_val == 's':
+            ind += 1
+        elif l_val == 'p':
+            ind += 3
+        elif l_val == 'd':
+            ind += 5
+        else:
+            raise TypeError('wrong l value')
+        perm_mat = direct_sum(perm_mat,perm_block[l_val])
+    return perm_mat
+
 # Single-shot VQE evaluation
 def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label="", solver='VQE', vqe_params=None):
     if solver.upper() != 'VQE':
