@@ -148,3 +148,25 @@ class PennyLaneSolver:
     def make_rdm12(self, ci_vec, ncas, nelecas):
         # 1 and 2-RDM from the classical CI vector.
         return self.classical.make_rdm12(ci_vec, ncas, nelecas)
+
+# Helper for VQE optimization
+def run_vqe_cas(mol, mo_guess, ncas, nelecas, solver='VQE', mode='SCF'):
+    mf_init = scf.RHF(mol); mf_init.kernel()
+    if mode == 'SCF':
+        mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
+    else:
+        mode == "CI"
+        mc = mcscf.CASCI(mf_init, ncas=ncas, nelecas=nelecas)
+        
+    mc.mo_coeff = mo_guess
+    if solver == 'VQE':
+        mc.fcisolver = PennyLaneSolver(mf_init)
+    else:
+        assert solver == 'FCI'
+    #mc.max_cycle = 1
+    #mc.conv_tol_grad = 1.0
+
+    e_tot, e_cas, ci_vec, mo_coeff, mo_energy = mc.kernel()
+    if solver == 'FCI':
+        mc.fcisolver.params = None
+    return e_tot, mc.fcisolver.params, mo_coeff, ci_vec, mc
