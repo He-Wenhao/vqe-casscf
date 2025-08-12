@@ -1,4 +1,3 @@
-# sanity check to make sure the code is working (most are already integrated into each of the Figure.py files)
 import pennylane as qml
 from pennylane import numpy as pnp
 import numpy as np
