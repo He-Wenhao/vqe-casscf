@@ -94,25 +94,18 @@ def calc_basisNN_inp_file(inp_data):
     proj = perm @ proj @ perm.T
     proj = sqrtS @ proj @ sqrtS
 
+    # Get eigenvectors of projection matrix as orbital guess
     eigvals, eigvecs = eigh(proj)
     idx = np.argsort(eigvals)[::-1]
     sqrtS_inv = inv(sqrtS)
     mo_guess = sqrtS_inv @ eigvecs[:, idx]
     
-    # Run Hartree-Fock to initialize SCF object
-    mf = scf.RHF(mol)
-    mf.kernel()
-    
-    # use CASSCF with appropriate active space
+    # Use CASSCF with appropriate active space
     n_atoms = len(atoms)
     ncas, nelecas = n_atoms, n_atoms
     
-    # Run CASSCF with the ML orbital guess
-    mc = mcscf.CASSCF(mf, ncas=ncas, nelecas=nelecas)
-    mc.mo_coeff = mo_guess
-    mc.kernel()
-    
-    E = mc.e_tot
+    # Use run_vqe_cas function but invoke FCI solver
+    E, _, mo_coeff, ci_vec, mc = run_vqe_cas(mol, mo_guess, ncas, nelecas, solver='FCI')
     
     #L1 norm
     l = np.sum(np.abs(mc.mo_coeff))
