@@ -206,3 +206,82 @@ def casscf_overlap(mc1, mc2):
     infidelity = 1 - abs(overlap)**2
     
     return infidelity
+
+# Single-shot VQE evaluation
+def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label="", solver='VQE', vqe_params=None):
+    if solver.upper() != 'VQE':
+        raise ValueError("Only VQE solver is supported in this clean version")
+    
+    if vqe_params is None:
+        raise ValueError("vqe_params must be provided for VQE")
+    
+    # Get active space integrals
+    h1e, g2e = get_active_space_integrals(mol, mo_guess, ncas, nelecas)
+    H_const = mol.energy_nuc()
+    
+    # Handle nelecas
+    if isinstance(nelecas, (tuple, list)):
+        n_electrons = sum(nelecas)
+    else:
+        n_electrons = nelecas
+    
+    # Single-shot evaluation
+    from itertools import product
+    
+    # Add spin
+    def add_spin_1bd(m):
+        dim = m.shape[0]
+        res = np.zeros((2*dim,2*dim))
+        for p, q in product(range(dim), repeat=2):
+            res[2*p, 2*q] = m[p,q]
+            res[2*p+1, 2*q+1] = m[p,q]
+        return res
+
+    def add_spin_2bd(g):
+        dim = g.shape[0]
+        res = np.zeros((2*dim,)*4)
+        for p, q, r, s in product(range(dim), repeat=4):
+            val = g[p,q,r,s]
+            if abs(val) < 1e-12:
+                continue
+            for σ1, σ2 in product(range(2), repeat=2):
+                res[2*p+σ1, 2*q+σ2, 2*r+σ2, 2*s+σ1] = val
+        return res / 2.0
+
+    int1_spin = add_spin_1bd(h1e)
+    g_phys = g2e.transpose((0, 2, 3, 1))
+    int2_spin = add_spin_2bd(g_phys)
+
+    # Build Hamiltonian
+    intop = InteractionOperator(H_const, int1_spin, int2_spin)
+    ferm_ham = get_fermion_operator(intop)
+    qub_ham = jordan_wigner(ferm_ham)
+    n_qubits = max(i for term in qub_ham.terms for i, _ in term) + 1
+    Hmat = get_sparse_operator(qub_ham, n_qubits).toarray()
+    H = qml.Hermitian(Hmat, wires=range(n_qubits))
+
+    # Build ansatz
+    singles, doubles = excitations(n_electrons, n_qubits)
+    hf_bits = hf_state(n_electrons, n_qubits)
+    n_sing = len(singles)
+
+    def ansatz(params):
+        qml.BasisState(hf_bits, wires=range(n_qubits))
+        for θ, ex in zip(params[:n_sing], singles):
+            qml.SingleExcitation(θ, wires=ex)
+        for θ, ex in zip(params[n_sing:], doubles):
+            qml.DoubleExcitation(θ, wires=ex)
+
+    dev = qml.device("default.qubit", wires=n_qubits)
+
+    @qml.qnode(dev, interface="autograd")
+    def circuit(params):
+        ansatz(params)
+        return qml.expval(H)
+
+    # Single evaluation
+    params = pnp.array(vqe_params, requires_grad=False)
+    energy = float(pnp.real(circuit(params)))
+    
+    print(f"Single-shot VQE ({label}) energy: {energy:.8f} Ha")
+    return None, 0, mo_guess, energy
