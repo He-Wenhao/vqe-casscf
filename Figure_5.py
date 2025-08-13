@@ -22,8 +22,10 @@ from utils import *
 from vqe_driver import *
 from checker import *
 
+BOND_LENGTH = 2.3
+FILE = f"data/H4_hyb_diss/obs/{int(BOND_LENGTH*10-3)}.json"
 
-def load_projection_data(filename="obs/20.json", atom=None):
+def load_projection_data(filename=FILE, atom=None):
     obs_path = Path(filename)
     obs_data = json.load(open(obs_path))
     proj = np.array(obs_data["proj"])
@@ -158,10 +160,10 @@ def visualize_extended_scan(ts, energies, converged, E_hf_orig, E_nn_orig):
     return idx_min, idx_max
 
 def main():
-    mol, atom = setup_molecule(d=2.3)
+    mol, atom = setup_molecule(d=BOND_LENGTH)
     ncas, nelecas = 4, 4
 
-    nn_mo_coeff = load_projection_data("obs/20.json", atom)
+    nn_mo_coeff = load_projection_data(FILE, atom)
 
     mf_hf = scf.RHF(mol)
     mf_hf.kernel()
