@@ -412,7 +412,7 @@ def main():
     plot_energy_distribution(methods, energy_data, name_l, method_index, colors)
     
     # Collect L1 norm data
-    l_data = collect_l_data(name_l, l_data, folder)
+    l_data = collect_l_data(name_l, l_data, FOLDER)
     
     # Plot L1 norm distribution
     plot_l_norm_distribution(l_data, name_l, method_index, colors, methods)
