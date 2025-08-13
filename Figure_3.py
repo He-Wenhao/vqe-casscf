@@ -377,7 +377,6 @@ def main():
     idx = np.argsort(eigvals)[::-1]
     sqrtS_inv = inv(sqrtS)
     sorted_eigvecs = sqrtS_inv @ eigvecs[:, idx]
-    #nn_orbitals = sorted_eigvecs
         
     # run classical vqe
         
