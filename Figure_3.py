@@ -181,7 +181,7 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
     ncas, nelecas = 4, 4
     
     # Load NN projection
-    obs_path = Path(f"obs/{int(d*10-3)}.json")
+    obs_path = Path(f"data/H4_hyb_diss/obs/{int(d*10-3)}.json")
     if obs_path.exists():
         with open(obs_path) as f:
             obs_data = json.load(f)
@@ -350,7 +350,48 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
     return results
     
 def main():
-    results = analyze_vqe_casci_vs_fci_casscf(0.7)
+    d_1 = 0.7
+    pos = [[0,0,0], [d_1,0,0], [2*d_1,0,0], [3*d_1,0,0]]
+    elements = ["H", "H", "H", "H"]
+    atom = [[el, tuple(c)] for el, c in zip(elements, pos)]
+        
+    # Load projection from deginated obs json file
+    obs_path = Path(f"data/H4_hyb_diss/obs/{int(d_1*10-3)}.json")
+    obs_data = np.array(scipy.json.load(open(obs_path))) if False else None
+    # actually use JSON
+    obs_data = json.load(open(obs_path))
+    proj = np.array(obs_data["proj"])
+        
+    # Overlap and permutation
+    S = gto.M(atom=atom, basis="cc-pVDZ").intor("int1e_ovlp")
+    sqrtS = scipy.linalg.sqrtm(S).real
+    perm = perm_orca2pyscf(atom=atom, basis="cc-pVDZ")
+    proj = perm @ proj @ perm.T
+        
+    # Build molecule
+    mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=0)
+    ncas, nelecas = 4, 4
+        
+    # NN initial guess from projection
+    eigvals, eigvecs = eigh(proj)
+    idx = np.argsort(eigvals)[::-1]
+    sqrtS_inv = inv(sqrtS)
+    sorted_eigvecs = sqrtS_inv @ eigvecs[:, idx]
+    #nn_orbitals = sorted_eigvecs
+        
+    # run classical vqe
+        
+    # HF initial guess
+    mf_hf = scf.RHF(mol)
+    mf_hf.kernel()
+    fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci = run_vqe_cas(mol,  mf_hf.mo_coeff, ncas, nelecas,solver='FCI')
+    print(f"HF-initialized CI-CAS energy: {fci_E_hf:.8f} Ha")
+        
+    # run classical vqe
+    fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci = run_vqe_cas(mol,  sorted_eigvecs, ncas, nelecas,solver='FCI')
+    print(f"HF-initialized CI-CAS energy: {fci_E_nn:.8f} Ha")
+
+    results = analyze_vqe_casci_vs_fci_casscf(d_1)
     return results
 
 if __name__ == "__main__":
