@@ -15,42 +15,53 @@ from pyscf import gto, scf, dft
 from vqe_driver import perm_orca2pyscf
 
 mpl.rcParams['pdf.fonttype'] = 42
+FOLDER = "/global/homes/w/whe1/ML-LinearSpace/dataset/H4_hyb_diss_2"
+FILE_PATH = "inference.json"
+num_chains = 25  # Number of chains
+chain_length = 4  # Number of H atoms per chain
+bond_length_interval = 0.1
 
-# Initialize containers for energies
-methods = ["CASSCF", "HF", "B3LYP", "sto-3G","basisNN","ccpVDZ"]
 
-method_index = {
-    'basisNN': 0,
-    'CASSCF': 1,
-    'HF': 2,
-    "B3LYP":3,
-    'sto-3G': 4
-}
+def initialize_data_structures():
+    methods = ["CASSCF", "HF", "B3LYP", "sto-3G", "basisNN", "ccpVDZ"]
+    
+    method_index = {
+        'basisNN': 0,
+        'CASSCF': 1,
+        'HF': 2,
+        "B3LYP": 3,
+        'sto-3G': 4
+    }
+    
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    energy_data = {method: [] for method in methods}
+    l_data = {}
+    
+    return methods, method_index, colors, energy_data, l_data
 
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-energy_data = {method: [] for method in methods}
-l_data = {}
-
-# Load the JSON file
-folder = "/global/homes/w/whe1/ML-LinearSpace/dataset/H4_hyb_diss_2"
-file_path = "inference.json"
-with open(file_path, "r") as file:
-    data = json.load(file)
-
-eigenvalue_l = []
-name_l = np.array(data["name"])
-print(name_l)
-print(len(data["proj"]))
-for i in range(len(data["proj"])):
-    # Extract the first matrix under the 'proj' key
-    i_matrix = np.array(data["proj"][i])
-
-    # Compute the eigenvalues
-    eigenvalues = np.linalg.eigvals(i_matrix)
-    eigenvalues.sort()
-    eigenvalue_l.extend(eigenvalues)
-print(len(eigenvalue_l))
+def load_and_process_inference_data(file_path=FILE_PATH):
+    with open(file_path, "r") as file:
+        data = json.load(file)
+    
+    eigenvalue_l = []
+    name_l = np.array(data["name"])
+    
+    print(name_l)
+    print(len(data["proj"]))
+    
+    for i in range(len(data["proj"])):
+        # Extract the first matrix under the 'proj' key
+        i_matrix = np.array(data["proj"][i])
+        
+        # Compute the eigenvalues
+        eigenvalues = np.linalg.eigvals(i_matrix)
+        eigenvalues.sort()
+        eigenvalue_l.extend(eigenvalues)
+    
+    print(len(eigenvalue_l))
+    
+    return data, eigenvalue_l, name_l
 
 
 def plot_distribution(eigenvalue_l, bins=50):
@@ -70,9 +81,6 @@ def plot_distribution(eigenvalue_l, bins=50):
     plt.title('Eigenvalue Distribution')
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.show()
-
-# Example usage
-plot_distribution(eigenvalue_l)
 
 
 def calc_basisNN_inp_file(inp_data):
@@ -111,271 +119,310 @@ def calc_basisNN_inp_file(inp_data):
     l = np.sum(np.abs(mc.mo_coeff))
     
     return E, l
+
+
+def compute_basisNN_energies(data, energy_data, l_data):
+    print(len(data["proj"]))
+    
+    energy_data['basisNN'] = []
+    l_data["basisNN"] = []
+    
+    with tqdm(total=len(data["proj"]), desc="Processing", dynamic_ncols=True) as pbar:
+        for proj, elements, pos in zip(data["proj"], data["elements"], data["pos"]):
+            inp_data = {'elements': elements, 'coordinates': pos, 'proj': proj}
+            basisNN_E, basisNN_l = calc_basisNN_inp_file(inp_data)
+            energy_data['basisNN'].append(basisNN_E)
+            l_data["basisNN"].append(basisNN_l)
+            
+            pbar.set_postfix({"basisNN_E": f"{basisNN_E:.6f}"})  # Format to 6 decimals for better readability
+            pbar.update(1)
+    
+    return energy_data, l_data
+
+
+def collect_other_energies(name_l, energy_data, folder=FOLDER):
+    energy_data['CASSCF'] = []
+    energy_data['HF'] = []
+    energy_data['B3LYP'] = []
+    energy_data['sto-3G'] = []
+    
+    for name in name_l:
+        # Load the JSON file
+        file_path = os.path.join(folder, 'obs', name)
+        with open(file_path, "r") as file:
+            data = json.load(file)
+        energy_data['CASSCF'].append(data['E_opt']['E'])
+        energy_data['HF'].append(data['HF']['E'])
+        energy_data['B3LYP'].append(data['B3LYP']['E'])
+        energy_data['sto-3G'].append(data['sto-3G']['E'])
+        energy_data['ccpVDZ'].append(data['ccpVDZ']['E'])
+    
+    return energy_data
+
+
+def get_name_method_mapping(methods):
+    name_method = {}
+    for method in methods:
+        if method == 'ccpVDZ' or method == 'sto-3G':
+            name_method[method] = method
+        elif method == 'HF' or method == 'B3LYP':
+            name_method[method] = f"Molecule Orbital({method})"
+        elif method == 'CASSCF':
+            name_method[method] = f"{method} active space"
+        elif method == 'basisNN':
+            name_method[method] = "ML predicted basis"
+        else:
+            raise Exception("Error message")
+    
+    return name_method
+
+
+def plot_energy_distribution(methods, energy_data, name_l, method_index, colors):
+    lengths = []
+    for point in range(3, num_chains + 1):
+        bond_length = bond_length_interval * point
+        lengths.append(bond_length)
+    
+    numeric_values = np.array([int(name.split('.')[0]) for name in name_l])
+    sorted_indices = np.argsort(numeric_values)
+    
+    # Create main figure
+    fig, ax_main = plt.subplots(figsize=(10, 6))
+    
+    name_method = get_name_method_mapping(methods)
+    
+    # Plot main figure (Energy distribution)
+    for method in methods:
+        if method != 'ccpVDZ' and energy_data[method]:  # Ensure there's data to plot
+            i = method_index[method]
+            color = colors[i % len(colors)]
+            if i == 0:
+                ax_main.plot(np.array(energy_data[method])[sorted_indices], label=name_method[method], 
+                           color=color, alpha=1, linewidth=1.2)
+            else:
+                ax_main.plot(np.array(energy_data[method])[sorted_indices], label=name_method[method], 
+                           color=color, alpha=0.6, linewidth=1.2)
+    ax_main.plot(np.array(energy_data['ccpVDZ'])[sorted_indices], label='ccpVDZ', 
+                color='grey', linestyle='--')
+    
+    ax_main.set_xlabel("Configuration", fontsize=25)
+    ax_main.set_ylabel("Energy (Hartree)", fontsize=25)
+    ax_main.tick_params(axis='both', which='major', labelsize=23)
+    ax_main.tick_params(axis='both', which='minor', labelsize=23)
+    ax_main.grid(False)
+    
+    # Create an inset axes
+    ax_inset = fig.add_axes([0.4, 0.6, 0.3, 0.3])  # Adjust inset position and size
+    
+    # Get baseline energy values
+    baseline_energy = np.array(energy_data['ccpVDZ'])[sorted_indices]
+    
+    # Plot error relative to 'opt' inside inset
+    for method in methods:
+        if method != 'ccpVDZ' and energy_data[method]:  # Ensure there's data to plot
+            i = method_index[method]
+            color = colors[i % len(colors)]
+            error = np.array(energy_data[method])[sorted_indices] - baseline_energy
+            if i == 0:
+                ax_inset.plot(error, label=f"{name_method[method]} - ccpVDZ", 
+                            color=color, alpha=1, linewidth=2)
+            else:
+                ax_inset.plot(error, label=f"{name_method[method]} - ccpVDZ", 
+                            color=color, alpha=0.6, linewidth=1.2)
+    
+    ax_inset.set_title("Basis Error", fontsize=25)
+    ax_inset.tick_params(axis='both', which='major', labelsize=23)
+    ax_inset.tick_params(axis='both', which='minor', labelsize=23)
+    
+    # Save and show the plot
+    plt.tight_layout()
+    plt.savefig("figs/H4_E.pdf", metadata={"TextAsShapes": False})
+    plt.close()
+
+
+def collect_l_data(name_l, l_data, folder=FOLDER):
+    # Other energies
+    l_data['l_opt'] = []
+    l_data['CASSCF'] = []
+    l_data['HF'] = []
+    l_data['B3LYP'] = []
+    l_data['sto-3G'] = []
+    
+    for name in name_l:
+        # Load the JSON file
+        file_path = os.path.join(folder, 'obs', name)
+        with open(file_path, "r") as file:
+            data = json.load(file)
+        l_data['l_opt'].append(data['l_opt']['l'])
+        l_data['CASSCF'].append(data['E_opt']['l'])
+        l_data['HF'].append(data['HF']['l'])
+        l_data['B3LYP'].append(data['B3LYP']['l'])
+        l_data['sto-3G'].append(data['sto-3G']['l'])
+    
+    return l_data
+
+
+def plot_l_norm_distribution(l_data, name_l, method_index, colors, methods):
+    lengths = []
+    for point in range(3, num_chains + 1):
+        bond_length = bond_length_interval * point
+        lengths.append(bond_length)
+    
+    # Plot the frequency distribution for each method using KDE
+    plt.figure(figsize=(10, 6))
+    
+    numeric_values = np.array([int(name.split('.')[0]) for name in name_l])
+    sorted_indices = np.argsort(numeric_values)
+    
+    name_method = get_name_method_mapping(methods)
+    
+    l_methods = ['CASSCF', 'HF', 'B3LYP', 'sto-3G', 'basisNN']
+    for method in l_methods:
+        if l_data[method]:  # Ensure there's data to plot
+            i = method_index[method]
+            color = colors[i % len(colors)]
+            if i == 0:
+                plt.plot(np.array(l_data[method])[sorted_indices], label=name_method[method], 
+                        color=color, alpha=1, linewidth=2)
+            else:
+                plt.plot(np.array(l_data[method])[sorted_indices], label=name_method[method], 
+                        color=color, alpha=0.6, linewidth=1.2)
+    
+    # Configure the plot
+    plt.xlabel("configuration", fontsize=25)
+    plt.ylabel("l-1 norm (Hartree)", fontsize=25)
+    plt.tick_params(axis='both', which='major', labelsize=23)
+    plt.tick_params(axis='both', which='minor', labelsize=23)
+    
+    # Save the plot as a file
+    output_file = "energy_distribution_smooth.pdf"
+    plt.tight_layout()
+    plt.savefig("figs/H4_l.pdf", metadata={"TextAsShapes": False})
+    plt.close()
+    
+    print(f"Figure saved as {output_file}")
+
+
+def plot_cartoon_with_error(energy_data, name_l, method_index, methods):
+    # ======= PREPARE DATA =======
+    bond_length = 0.74
+    positions = [i * bond_length for i in range(4)]
+    
+    methods_subset = ["CASSCF", "HF", "basisNN", "ccpVDZ"]
+    mycolor = {"CASSCF": None, "HF": 'red', "basisNN": 'blue', "ccpVDZ": None}
+    numeric_values = np.array([int(name.split('.')[0]) for name in name_l])
+    sorted_indices = np.argsort(numeric_values)
+    
+    name_method = get_name_method_mapping(methods)
+    
+    # Generate lengths
+    lengths = [bond_length_interval * point for point in range(3, num_chains + 1)]
+    
+    # ======= CREATE FIGURE AND GRIDSPEC =======
+    fig = plt.figure(figsize=(8, 8))
+    gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 2])
+    
+    # ------- Panel 1: Molecule cartoon -------
+    ax0 = fig.add_subplot(gs[0])
+    radius = 0.05
+    for x in positions:
+        circle = Circle((x, 0), radius=radius, edgecolor='black', facecolor='white', linewidth=2)
+        ax0.add_patch(circle)
+        ax0.text(x, 0.1, 'H', ha='center', va='bottom', fontsize=16)
+    
+    arrow_y = -0.1
+    for i in range(len(positions) - 1):
+        x0, x1 = positions[i], positions[i + 1]
+        ax0.annotate('', xy=(x1, arrow_y), xytext=(x0, arrow_y),
+                     arrowprops=dict(arrowstyle='<->', color='black', linewidth=1.5))
+        ax0.text((x0 + x1) / 2, arrow_y - 0.05, 'r', ha='center', va='top', fontsize=14)
+    
+    ax0.set_xlim(-0.5, positions[-1] + 0.5)
+    ax0.set_ylim(-0.3, 0.4)
+    ax0.set_aspect('equal')
+    ax0.axis('off')
+    
+    # ------- Panel 2: Error plot -------
+    ax1 = fig.add_subplot(gs[1])
+    baseline_energy = np.array(energy_data['ccpVDZ'])[sorted_indices]
+    
+    for method in methods_subset:
+        if method != 'ccpVDZ' and energy_data[method]:
+            i = method_index[method]
+            error = np.array(energy_data[method])[sorted_indices] - baseline_energy
+            if method != 'CASSCF':
+                ax1.plot(lengths[:-2], error[:-2], label=f"{name_method[method]} - ccpVDZ",
+                         color=mycolor[method], marker='o', markerfacecolor='white')
+            else:
+                ax1.plot(lengths[:-2], error[:-2], label=f"{name_method[method]} - ccpVDZ",
+                         color='grey', markerfacecolor='white', linestyle='--')
+    
+    ax1.set_title("Basis Set Error Relative to ccpVDZ", fontsize=14)
+    ax1.set_xlabel("r ($\AA$)", fontsize=16)
+    ax1.set_ylabel("Energy Error (Hartree)", fontsize=16)
+    plt.tick_params(axis='both', direction='in', length=6, width=1, labelsize=14)
+    plt.xlim(0, 2.5)
+    plt.ylim(0, 0.08)
+    
+    ax1.legend()
+    
+    # ------- Layout & Save -------
+    plt.subplots_adjust(hspace=0.4)
+    plt.savefig("figs/H4_cartoon_error_plot.pdf", metadata={"TextAsShapes": False})
+    plt.show()
+    
+    return ax1
+
+
+def save_legend_separately(ax1):
+    # Reuse handles and labels from the main plot
+    handles, labels = ax1.get_legend_handles_labels()
+    
+    # Create a separate figure for the legend
+    fig_legend = plt.figure(figsize=(16, 2))
+    ax_legend = fig_legend.add_subplot(111)
+    ax_legend.axis('off')
+    
+    # Draw the legend
+    legend = ax_legend.legend(handles, labels, loc='center', ncol=5, fontsize=14, frameon=False)
+    
+    # Save or show
+    plt.tight_layout()
+    fig_legend.savefig("figs/H4_legend_only.pdf", metadata={"TextAsShapes": False})
+    plt.show()
+
+
+def main():
+    # Initialize data structures
+    methods, method_index, colors, energy_data, l_data = initialize_data_structures()
+    
+    # Load and process inference data
+    data, eigenvalue_l, name_l = load_and_process_inference_data("inference.json")
+    
+    # Plot eigenvalue distribution
+    plot_distribution(eigenvalue_l)
+    
+    # Compute basisNN energies
+    energy_data, l_data = compute_basisNN_energies(data, energy_data, l_data)
+    
+    # Collect energies from other methods
+    energy_data = collect_other_energies(name_l, energy_data, FOLDER)
+    
+    # Plot energy distribution
+    plot_energy_distribution(methods, energy_data, name_l, method_index, colors)
+    
+    # Collect L1 norm data
+    l_data = collect_l_data(name_l, l_data, folder)
+    
+    # Plot L1 norm distribution
+    plot_l_norm_distribution(l_data, name_l, method_index, colors, methods)
+    
+    # Plot molecule cartoon with error
+    ax1 = plot_cartoon_with_error(energy_data, name_l, method_index, methods)
+    
+    # Save legend separately
+    save_legend_separately(ax1)
     
 
-print(len(data["proj"]))
-
-energy_data['basisNN'] = []
-l_data["basisNN"] = []
-
-with tqdm(total=len(data["proj"]), desc="Processing", dynamic_ncols=True) as pbar:
-    for proj, elements, pos in zip(data["proj"], data["elements"], data["pos"]):
-        inp_data = {'elements': elements, 'coordinates': pos, 'proj': proj}
-        basisNN_E, basisNN_l = calc_basisNN_inp_file(inp_data)
-        energy_data['basisNN'].append(basisNN_E)
-        l_data["basisNN"].append(basisNN_l)
-        
-        pbar.set_postfix({"basisNN_E": f"{basisNN_E:.6f}"})  # Format to 6 decimals for better readability
-        pbar.update(1)
-
-
-# collect other energies
-energy_data['CASSCF'] = []
-energy_data['HF'] = []
-energy_data['B3LYP'] = []
-energy_data['sto-3G'] = []
-for name in name_l:
-    # Load the JSON file
-    file_path = os.path.join(folder,'obs',name)
-    with open(file_path, "r") as file:
-        data = json.load(file)
-    energy_data['CASSCF'].append(data['E_opt']['E'])
-    energy_data['HF'].append(data['HF']['E'])
-    energy_data['B3LYP'].append(data['B3LYP']['E'])
-    energy_data['sto-3G'].append(data['sto-3G']['E'])
-    energy_data['ccpVDZ'].append(data['ccpVDZ']['E'])
-
-
-num_chains = 25  # Number of chains
-chain_length = 4  # Number of H atoms per chain
-bond_length_interval = 0.1
-lengths = []
-for point in range(3, num_chains + 1):
-    bond_length = bond_length_interval * point
-    lengths.append(bond_length)
-
-# Assume `methods`, `energy_data`, and `name_l` are defined elsewhere
-numeric_values = np.array([int(name.split('.')[0]) for name in name_l])
-sorted_indices = np.argsort(numeric_values)
-
-# Create main figure
-fig, ax_main = plt.subplots(figsize=(10, 6))
-
-name_method = {}
-for method in methods:
-    print(method)
-    if method == 'ccpVDZ' or method == 'sto-3G':
-        name_method[method] = method
-    elif method == 'HF' or method == 'B3LYP':
-        name_method[method] = f"Molecule Orbital({method})"
-    elif method == 'CASSCF':
-        name_method[method] = f"{method} active space"
-    elif method == 'basisNN':
-        name_method[method] = "ML predicted basis"
-    else:
-        raise ExceptionType("Error message")
-        
-        
-
-# Plot main figure (Energy distribution)
-for method in methods:
-    if  method != 'ccpVDZ' and energy_data[method]:  # Ensure there's data to plot
-        i = method_index[method]
-        color = colors[i % len(colors)]
-        if i == 0:
-            ax_main.plot( np.array(energy_data[method])[sorted_indices], label=name_method[method],color = color,alpha=1, linewidth=1.2)
-        else:  
-            ax_main.plot( np.array(energy_data[method])[sorted_indices], label=name_method[method],color = color,alpha=0.6, linewidth=1.2)
-ax_main.plot(np.array(energy_data['ccpVDZ'])[sorted_indices], label='ccpVDZ', color='grey', linestyle='--')
-
-ax_main.set_xlabel("Configuration", fontsize=25)
-ax_main.set_ylabel("Energy (Hartree)", fontsize=25)
-ax_main.tick_params(axis='both', which='major', labelsize=23)
-ax_main.tick_params(axis='both', which='minor', labelsize=23)
-ax_main.grid(False)
-
-# Create an inset axes
-ax_inset = fig.add_axes([0.4, 0.6, 0.3, 0.3])  # Adjust inset position and size
-
-# Get baseline energy values
-baseline_energy = np.array(energy_data['ccpVDZ'])[sorted_indices]
-
-# Plot error relative to 'opt' inside inset
-for method in methods:
-    if method != 'ccpVDZ' and energy_data[method]:  # Ensure there's data to plot
-        i = method_index[method]
-        color = colors[i % len(colors)]
-        error = np.array(energy_data[method])[sorted_indices] - baseline_energy
-        if i ==0:
-            ax_inset.plot( error, label=f"{name_method[method]} - ccpVDZ",color = color,alpha=1, linewidth=2)
-        else:
-            
-            ax_inset.plot( error, label=f"{name_method[method]} - ccpVDZ",color = color,alpha=0.6, linewidth=1.2)
-
-ax_inset.set_title("Basis Error", fontsize=25)
-ax_inset.tick_params(axis='both', which='major', labelsize=23)
-ax_inset.tick_params(axis='both', which='minor', labelsize=23)
-
-# Save and show the plot
-plt.tight_layout()
-#plt.show()
-plt.savefig("figs/H4_E.pdf",metadata={"TextAsShapes": False})
-plt.close()
-
-
-# collect other energies
-
-l_data['l_opt'] = []
-l_data['CASSCF'] = []
-l_data['HF'] = []
-l_data['B3LYP'] = []
-l_data['sto-3G'] = []
-for name in name_l:
-    # Load the JSON file
-    file_path = os.path.join(folder,'obs',name)
-    with open(file_path, "r") as file:
-        data = json.load(file)
-    l_data['l_opt'].append(data['l_opt']['l'])
-    l_data['CASSCF'].append(data['E_opt']['l'])
-    l_data['HF'].append(data['HF']['l'])
-    l_data['B3LYP'].append(data['B3LYP']['l'])
-    l_data['sto-3G'].append(data['sto-3G']['l'])
-
-
-
-num_chains = 25  # Number of chains
-chain_length = 4  # Number of H atoms per chain
-bond_length_interval = 0.1
-lengths = []
-for point in range(3, num_chains + 1):
-    bond_length = bond_length_interval * point
-    lengths.append(bond_length)
-
-
-# Plot the frequency distribution for each method using KDE
-plt.figure(figsize=(10, 6))
-
-numeric_values = np.array([int(name.split('.')[0]) for name in name_l])
-sorted_indices = np.argsort(numeric_values)
-
-l_methods = ['CASSCF','HF','B3LYP','sto-3G','basisNN']
-for method in l_methods:
-    if l_data[method]:  # Ensure there's data to plot
-        i = method_index[method]
-        color = colors[i % len(colors)]
-        if i == 0:
-            plt.plot( np.array(l_data[method])[sorted_indices], label=name_method[method],color = color,alpha=1, linewidth=2)
-        else:
-            plt.plot( np.array(l_data[method])[sorted_indices], label=name_method[method],color = color,alpha=0.6, linewidth=1.2)
-            
-
-# Configure the plot
-plt.xlabel("configuration", fontsize=25)
-plt.ylabel("l-1 norm (Hartree)", fontsize=25)
-plt.tick_params(axis='both', which='major', labelsize=23)
-plt.tick_params(axis='both', which='minor', labelsize=23)
-
-# Save the plot as a file
-output_file = "energy_distribution_smooth.pdf"
-plt.tight_layout()
-plt.savefig("figs/H4_l.pdf",metadata={"TextAsShapes": False})
-plt.close()
-
-print(f"Figure saved as {output_file}")
-
-
-# ======= PREPARE DATA =======
-bond_length = 0.74
-positions = [i * bond_length for i in range(4)]
-
-methods = ["CASSCF", "HF", "basisNN", "ccpVDZ"]
-mycolor = {"CASSCF":None, "HF":'red', "basisNN":'blue', "ccpVDZ":None}
-numeric_values = np.array([int(name.split('.')[0]) for name in name_l])
-sorted_indices = np.argsort(numeric_values)
-
-name_method = {}
-for method in methods:
-    if method == 'ccpVDZ' or method == 'sto-3G':
-        name_method[method] = method
-    elif method == 'HF' or method == 'B3LYP':
-        name_method[method] = f"Molecule Orbital({method})"
-    elif method == 'CASSCF':
-        name_method[method] = f"{method} active space"
-    elif method == 'basisNN':
-        name_method[method] = "ML predicted basis"
-    else:
-        raise Exception("Unrecognized method")
-
-# ======= CREATE FIGURE AND GRIDSPEC =======
-fig = plt.figure(figsize=(8, 8))
-gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 2])
-
-# ------- Panel 1: Molecule cartoon -------
-ax0 = fig.add_subplot(gs[0])
-radius = 0.05
-for x in positions:
-    circle = Circle((x, 0), radius=radius, edgecolor='black', facecolor='white', linewidth=2)
-    ax0.add_patch(circle)
-    ax0.text(x, 0.1, 'H', ha='center', va='bottom', fontsize=16)
-
-arrow_y = -0.1
-for i in range(len(positions) - 1):
-    x0, x1 = positions[i], positions[i + 1]
-    ax0.annotate('', xy=(x1, arrow_y), xytext=(x0, arrow_y),
-                 arrowprops=dict(arrowstyle='<->', color='black', linewidth=1.5))
-    ax0.text((x0 + x1) / 2, arrow_y - 0.05, 'r', ha='center', va='top', fontsize=14)
-
-ax0.set_xlim(-0.5, positions[-1] + 0.5)
-ax0.set_ylim(-0.3, 0.4)
-ax0.set_aspect('equal')
-ax0.axis('off')
-
-# ------- Panel 2: Error plot -------
-ax1 = fig.add_subplot(gs[1])
-baseline_energy = np.array(energy_data['ccpVDZ'])[sorted_indices]
-
-for method in methods:
-    if method != 'ccpVDZ' and energy_data[method]:
-        i = method_index[method]
-        error = np.array(energy_data[method])[sorted_indices] - baseline_energy
-        if method != 'CASSCF':
-            ax1.plot(lengths[:-2], error[:-2], label=f"{name_method[method]} - ccpVDZ",
-                     color=mycolor[method],marker = 'o', markerfacecolor='white')
-        else:
-            ax1.plot(lengths[:-2], error[:-2], label=f"{name_method[method]} - ccpVDZ",
-                     color='grey', markerfacecolor='white',linestyle='--')
-            
-
-ax1.set_title("Basis Set Error Relative to ccpVDZ", fontsize=14)
-ax1.set_xlabel("r ($\AA$)", fontsize=16)
-ax1.set_ylabel("Energy Error (Hartree)", fontsize=16)
-plt.tick_params(axis='both', direction='in', length=6, width=1, labelsize=14)
-plt.xlim(0, 2.5)
-plt.ylim(0, 0.08)
-
-ax1.legend()
-
-# ------- Layout & Save -------
-plt.subplots_adjust(hspace=0.4)
-plt.savefig("figs/H4_cartoon_error_plot.pdf", metadata={"TextAsShapes": False})
-plt.show()
-
-# ======= Legend as a standalone figure =======
-
-
-# Reuse handles and labels from the main plot
-handles, labels = ax1.get_legend_handles_labels()
-
-# Create a separate figure for the legend
-fig_legend = plt.figure(figsize=(16, 2))
-ax_legend = fig_legend.add_subplot(111)
-ax_legend.axis('off')
-
-# Draw the legend
-legend = ax_legend.legend(handles, labels, loc='center', ncol=5, fontsize=14, frameon=False)
-
-# Save or show
-plt.tight_layout()
-fig_legend.savefig("figs/H4_legend_only.pdf",metadata={"TextAsShapes": False})
-plt.show()
-
+if __name__ == "__main__":
+    main()
