@@ -20,6 +20,7 @@ from numpy.linalg import eigh, inv
 from utils import *
 from vqe_driver import *
 
+BOND_LENGTH = 0.7 # Just change right here. Nothing else needs to be touched.
 
 def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=True):
     # CASCI may provide g2 in reduced form, so handle different g2 formats
@@ -350,7 +351,7 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
     return results
     
 def main():
-    d_1 = 0.7 # Change here to run everything with this bond length
+    d_1 = BOND_LENGTH
     pos = [[0,0,0], [d_1,0,0], [2*d_1,0,0], [3*d_1,0,0]]
     elements = ["H", "H", "H", "H"]
     atom = [[el, tuple(c)] for el, c in zip(elements, pos)]
