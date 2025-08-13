@@ -40,5 +40,5 @@ conda env create -f environment.yml
 
 * code for figure 2:```Figure_2.py```
 * code for figure 3:```Figure_3.py```
-* code for figure 4:```Figure_4.py```
+* code for figure 4:```Figure_4.py``` (this file contains the energy difference curve in ```Figure_5.py```)
 * code for figure 5:```Figure_5.py```
