@@ -172,8 +172,8 @@ def run_vqe_casci(mol, mo_guess, ncas, nelecas, solver='VQE'):
     return e_tot, mc.fcisolver.params if hasattr(mc.fcisolver, 'params') else None, mo_coeff, ci_vec, mc
 
 
-def analyze_vqe_casci_vs_fci_casscf():
-    d = 0.7
+def analyze_vqe_casci_vs_fci_casscf(bond_length):
+    d = bond_length
     pos = [[0,0,0], [d,0,0], [2*d,0,0], [3*d,0,0]]
     elements = ["H", "H", "H", "H"]
     atom = [[el, tuple(c)] for el, c in zip(elements, pos)]
@@ -348,5 +348,10 @@ def analyze_vqe_casci_vs_fci_casscf():
     print("\nResults saved")
     
     return results
+    
+def main():
+    results = analyze_vqe_casci_vs_fci_casscf(0.7)
+    return results
 
-results = analyze_vqe_casci_vs_fci_casscf()
+if __name__ == "__main__":
+    results = main()
