@@ -21,6 +21,157 @@ from utils import *
 from vqe_driver import *
 
 
+def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=True):
+    # CASCI may provide g2 in reduced form, so handle different g2 formats
+    if hasattr(g2, 'shape'):
+        if g2.ndim == 4:
+            # Standard 4D format
+            g_phys = g2.transpose((0, 2, 3, 1))
+        elif g2.ndim == 2:
+            # Restore to 4D
+            from pyscf.ao2mo import restore
+            g2_4d = restore(1, g2, h1.shape[0])
+            g_phys = g2_4d.transpose((0, 2, 3, 1))
+        else:
+            raise ValueError(f"Unexpected g2 dimensions: {g2.ndim}")
+    else:
+        g_phys = g2
+
+    int1_spin = add_spin_1bd(h1)
+    int2_spin = add_spin_2bd(g_phys)
+
+    # fermionic to qubit Hamiltonian
+    intop = InteractionOperator(H_const, int1_spin, int2_spin)
+    ferm_ham = get_fermion_operator(intop)
+    qub_ham = jordan_wigner(ferm_ham)
+    n_qubits = max(i for term in qub_ham.terms for i, _ in term) + 1
+    Hmat = get_sparse_operator(qub_ham, n_qubits).toarray()
+    H = qml.Hermitian(Hmat, wires=range(n_qubits))
+
+    # UCCSD ansatz
+    singles, doubles = excitations(nele, n_qubits)
+    hf_bits = hf_state(nele, n_qubits)
+    n_sing = len(singles)
+    n_doub = len(doubles)
+    
+    n_spatial = n_qubits // 2
+
+    def ansatz(params):
+        qml.BasisState(hf_bits, wires=range(n_qubits))
+        for θ, ex in zip(params[:n_sing], singles):
+            qml.SingleExcitation(θ, wires=ex)
+        for θ, ex in zip(params[n_sing:], doubles):
+            qml.DoubleExcitation(θ, wires=ex)
+
+    dev = qml.device("default.qubit", wires=n_qubits)
+
+    @qml.qnode(dev, interface="autograd")
+    def circuit(params):
+        ansatz(params)
+        return qml.expval(H)
+
+    @qml.qnode(dev, interface="autograd")
+    def _state_qnode(params):
+        ansatz(params)
+        return qml.state()
+
+    cost = lambda p: pnp.real(circuit(p))
+    n_params = n_sing + n_doub
+
+    # Initialize parameters
+    if init_params is None:
+        params = pnp.zeros(n_params, requires_grad=True)
+    else:
+        params = pnp.array(init_params, requires_grad=True)
+
+    # Run VQE
+    opt = qml.AdamOptimizer(0.05)
+    energy = None
+    energy_history = []
+    ci_vec_history = []
+    
+    for i in range(200):
+        params, energy = opt.step_and_cost(cost, params)
+        energy_history.append(energy)
+        
+        if track_history and i % 10 == 0:
+            psi_temp = _state_qnode(params)
+            ci_temp = qubit_state_to_ci(psi_temp, n_orb=n_spatial, nelec=nele).real
+            ci_vec_history.append(ci_temp)
+            
+        if i % 50 == 0:
+            print(f"  PL-VQE iter {i:3d} → E = {energy:.8f} Ha")
+
+    energy = float(pnp.real(circuit(params)))
+    
+    # Get final CI vector
+    psi = _state_qnode(params)
+    ci_vec = qubit_state_to_ci(psi, n_orb=n_spatial, nelec=nele)
+    assert abs(ci_vec.imag).max() < 1e-10, "CI vector has non-zero imaginary part."
+    ci_vec = ci_vec.real
+    
+    e_cas_from_ci = fci.direct_spin1.energy(h1, g2, ci_vec, n_spatial, (nele//2, nele//2))
+    e_cas_from_ci += H_const
+    print(f"  FCI energy from CI vector: {e_cas_from_ci:.8f} Ha")
+    print(f"  VQE energy: {energy:.8f} Ha")
+
+    return float(energy), params, ci_vec, energy_history, ci_vec_history
+
+class PennyLaneSolverCASCI:
+    def __init__(self, mf):
+        self._mf = mf
+        self.params = None
+        self.energy_history = []
+        self.ci_vec_history = []
+        
+        self.spin = 0
+        self.nroots = 1
+        self.root = 0
+        
+        self.classical = DirectSpinFCI()
+        self.classical.spin = self.spin
+        self.classical.nroots = self.nroots
+        self.classical.root = self.root
+
+    def kernel(self, h1e, g2e, norb, nelec, ci0=None, verbose=0, max_memory=None, ecore=None, **kwargs):
+        H_const = ecore if ecore is not None else self._mf.energy_nuc()
+        nele = nelec[0] + nelec[1] if isinstance(nelec, (tuple, list)) else nelec
+        E, p, ci_vec, e_hist, ci_hist = pennylane_vqe_casci(
+            H_const, h1e, g2e, nele, init_params=self.params
+        )
+        self.params = p
+        self.energy_history = e_hist
+        self.ci_vec_history = ci_hist
+
+        return E, ci_vec
+
+    def make_rdm1(self, ci_vec, ncas, nelecas):
+        return self.classical.make_rdm1(ci_vec, ncas, nelecas)
+    
+    def make_rdm12(self, ci_vec, ncas, nelecas):
+        return self.classical.make_rdm12(ci_vec, ncas, nelecas)
+
+
+def run_vqe_casci(mol, mo_guess, ncas, nelecas, solver='VQE'):
+    mf_init = scf.RHF(mol)
+    mf_init.kernel()
+    
+    mc = mcscf.CASCI(mf_init, ncas=ncas, nelecas=nelecas)
+    mc.mo_coeff = mo_guess
+    
+    mc.canonicalization = False
+    
+    if solver == 'VQE':
+        mc.fcisolver = PennyLaneSolverCASCI(mf_init)
+    else:
+        assert solver == 'FCI'
+    
+    e_tot, e_cas, ci_vec, mo_coeff, mo_energy = mc.kernel()
+    
+    
+    return e_tot, mc.fcisolver.params if hasattr(mc.fcisolver, 'params') else None, mo_coeff, ci_vec, mc
+
+
 def analyze_vqe_casci_vs_fci_casscf(bond_length):
     d = bond_length
     pos = [[0,0,0], [d,0,0], [2*d,0,0], [3*d,0,0]]
