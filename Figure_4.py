@@ -159,7 +159,7 @@ def plot_step_comparisons(data_dict, save_figs=True):
         if save_figs:
             plt.savefig(f'figs/casscf_{fig_titles[i].lower().replace(" ", "_")}.pdf', metadata={"TextAsShapes": False})
 
-
+# This is part of Figure 4
 def plot_energy_difference(data_dict, save_figs=True):
     lengths = data_dict['lengths']
     nn_energy = data_dict['nn_energy']
@@ -246,7 +246,7 @@ def main():
     
     print("\n Plots:")
     plot_step_comparisons(data_dict, save_figs=True)
-    plot_energy_difference(data_dict, save_figs=True)
+    plot_energy_difference(data_dict, save_figs=True) # This is for Figure 4
     plot_convergence_curve("log_4.txt", save_figs=True)
     
     return results, data_dict
