@@ -22,7 +22,7 @@ from utils import *
 from vqe_driver import *
 from checker import *
 
-BOND_LENGTH = 2.3
+BOND_LENGTH = 2.3 # Just change bond length right here. Nothing else needs to be touched
 FILE = f"data/H4_hyb_diss/obs/{int(BOND_LENGTH*10-3)}.json"
 
 def load_projection_data(filename=FILE, atom=None):
