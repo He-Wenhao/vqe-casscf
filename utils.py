@@ -3,7 +3,7 @@ from pennylane import numpy as pnp
 import numpy as np
 from openfermion import InteractionOperator, get_fermion_operator
 from openfermion.transforms import jordan_wigner
-from openfermion.linalg import get_sparse_operator
+from openfermion import get_sparse_operator
 from itertools import product
 from pennylane.qchem import hf_state, excitations
 from pyscf import gto, scf, mcscf
