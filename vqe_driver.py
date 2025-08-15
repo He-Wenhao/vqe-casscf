@@ -128,7 +128,7 @@ class PennyLaneSolver:
         return self.classical.make_rdm12(ci_vec, ncas, nelecas)
 
 # Helper for VQE optimization
-def run_vqe_cas(mol, mo_guess, ncas, nelecas, solver='VQE', mode='SCF'):
+def run_cas(mol, mo_guess, ncas, nelecas, solver='VQE', mode='SCF'):
     mf_init = scf.RHF(mol); mf_init.kernel()
     if mode == 'SCF':
         mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
