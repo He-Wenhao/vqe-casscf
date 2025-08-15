@@ -227,7 +227,6 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
         proj = np.array(inference_data["proj"][bond_idx])
         
         print(f"Using projection matrix at index {bond_idx} for bond length {d}")
-        print(f"Configuration name: {inference_data['name'][bond_idx] if 'name' in inference_data else 'N/A'}")
         
         # Apply permutation
         S = mol.intor("int1e_ovlp")
@@ -406,9 +405,6 @@ def main():
         # Get the appropriate projection matrix for this bond length
         bond_idx = get_bond_length_index(d_1, inference_data)
         proj = np.array(inference_data["proj"][bond_idx])
-        
-        print(f"Using projection matrix at index {bond_idx} for bond length {d_1}")
-        print(f"Configuration name: {inference_data['name'][bond_idx] if 'name' in inference_data else 'N/A'}")
     else:
         print("ERROR: inference.json not found!")
         return None
