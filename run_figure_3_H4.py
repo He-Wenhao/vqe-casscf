@@ -8,7 +8,6 @@ from itertools import product
 from pennylane.qchem import hf_state, excitations
 from pyscf import gto, scf, mcscf
 from pyscf.fci.direct_spin1 import FCI as DirectSpinFCI
-import matplotlib.pyplot as plt
 from pathlib import Path
 import scipy
 from pyscf.fci import cistring
@@ -16,11 +15,15 @@ from pyscf import fci
 from math import comb
 import json
 from numpy.linalg import eigh, inv
+import os
 
 from utils import *
 from vqe_driver import *
 
-BOND_LENGTH = 0.4 # Just change right here. Nothing else needs to be touched.
+BOND_LENGTH = 2.3  # Change this as needed
+
+def ensure_dir(directory):
+    Path(directory).mkdir(parents=True, exist_ok=True)
 
 def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=True):
     # CASCI may provide g2 in reduced form, so handle different g2 formats
@@ -91,15 +94,17 @@ def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=T
     energy = None
     energy_history = []
     ci_vec_history = []
+    params_history = []
     
     for i in range(200):
         params, energy = opt.step_and_cost(cost, params)
-        energy_history.append(energy)
+        energy_history.append(float(energy))
+        params_history.append(params.copy())
         
         if track_history and i % 10 == 0:
             psi_temp = _state_qnode(params)
             ci_temp = qubit_state_to_ci(psi_temp, n_orb=n_spatial, nelec=nele).real
-            ci_vec_history.append(ci_temp)
+            ci_vec_history.append(ci_temp.tolist())
             
         if i % 50 == 0:
             print(f"  PL-VQE iter {i:3d} → E = {energy:.8f} Ha")
@@ -117,7 +122,7 @@ def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=T
     print(f"  FCI energy from CI vector: {e_cas_from_ci:.8f} Ha")
     print(f"  VQE energy: {energy:.8f} Ha")
 
-    return float(energy), params, ci_vec, energy_history, ci_vec_history
+    return float(energy), params.tolist(), ci_vec.tolist(), energy_history, ci_vec_history
 
 class PennyLaneSolverCASCI:
     def __init__(self, mf):
@@ -145,14 +150,13 @@ class PennyLaneSolverCASCI:
         self.energy_history = e_hist
         self.ci_vec_history = ci_hist
 
-        return E, ci_vec
+        return E, np.array(ci_vec)
 
     def make_rdm1(self, ci_vec, ncas, nelecas):
         return self.classical.make_rdm1(ci_vec, ncas, nelecas)
     
     def make_rdm12(self, ci_vec, ncas, nelecas):
         return self.classical.make_rdm12(ci_vec, ncas, nelecas)
-
 
 def run_vqe_casci(mol, mo_guess, ncas, nelecas, solver='VQE'):
     mf_init = scf.RHF(mol)
@@ -170,32 +174,17 @@ def run_vqe_casci(mol, mo_guess, ncas, nelecas, solver='VQE'):
     
     e_tot, e_cas, ci_vec, mo_coeff, mo_energy = mc.kernel()
     
-    
     return e_tot, mc.fcisolver.params if hasattr(mc.fcisolver, 'params') else None, mo_coeff, ci_vec, mc
 
-
 def get_bond_length_index(bond_length, inference_data):
-    """
-    Map bond length to index in inference.json based on positions.
-    
-    The inference.json file contains data for 23 different H4 configurations.
-    We need to find which index corresponds to our bond length.
-    """
-    # Get positions from inference data
     positions = inference_data['pos']
     
-    # Calculate bond lengths for each configuration
-    # Bond length is the distance between consecutive H atoms
-    target_found = False
     for idx, pos_set in enumerate(positions):
-        # Calculate first bond length (between H0 and H1)
         first_bond = pos_set[1][0] - pos_set[0][0]
-        
-        # Check if this matches our target bond length (with small tolerance)
         if abs(first_bond - bond_length) < 1e-6:
             return idx
     
-    # If exact match not found, find closest
+    # Find closest match
     min_diff = float('inf')
     best_idx = 0
     for idx, pos_set in enumerate(positions):
@@ -205,11 +194,10 @@ def get_bond_length_index(bond_length, inference_data):
             min_diff = diff
             best_idx = idx
     
-    print(f"Warning: Exact bond length {bond_length} not found in inference.json. Using closest match at index {best_idx}")
+    print(f"Warning: Using closest bond length match at index {best_idx}")
     return best_idx
 
-
-def analyze_vqe_casci_vs_fci_casscf(bond_length):
+def run_experiment(bond_length):
     d = bond_length
     pos = [[0,0,0], [d,0,0], [2*d,0,0], [3*d,0,0]]
     elements = ["H", "H", "H", "H"]
@@ -223,7 +211,6 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
         with open(inference_path) as f:
             inference_data = json.load(f)
         
-        # Get the appropriate projection matrix for this bond length
         bond_idx = get_bond_length_index(d, inference_data)
         proj = np.array(inference_data["proj"][bond_idx])
         
@@ -236,16 +223,13 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
         proj = perm @ proj @ perm.T
         
         # Get NN orbitals
-        from numpy.linalg import eigh, inv
         eigvals, eigvecs = eigh(proj)
         idx = np.argsort(eigvals)[::-1]
         sqrtS_inv = inv(sqrtS)
         nn_orbitals = sqrtS_inv @ eigvecs[:, idx]
     else:
-        print(f"Warning: inference.json not found, using HF orbitals for NN")
-        mf_temp = scf.RHF(mol)
-        mf_temp.kernel()
-        nn_orbitals = mf_temp.mo_coeff
+        print(f"ERROR: inference.json not found!")
+        return None
     
     # Get HF orbitals
     mf_hf = scf.RHF(mol)
@@ -256,10 +240,12 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
     print("Step 1: Running FCI-CASSCF as Reference")
     print("="*60)
     
-    # Run FCI-CASSCF (optimizes both orbitals and CI)
+    # Run FCI-CASSCF (reference)
     mc_fci_casscf = mcscf.CASSCF(mf_hf, ncas=ncas, nelecas=nelecas)
     mc_fci_casscf.mo_coeff = hf_orbitals
     e_fci_casscf = mc_fci_casscf.kernel()[0]
+    fci_casscf_ci = mc_fci_casscf.ci
+    fci_casscf_mo = mc_fci_casscf.mo_coeff
     print(f"FCI-CASSCF reference energy: {e_fci_casscf:.8f} Ha")
     
     print("\n" + "="*60)
@@ -280,26 +266,20 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
     )
     print(f"NN-VQE-CASCI final energy: {E_nn_casci:.8f} Ha")
     
-    # Track infidelities during optimization
-    print("\n" + "="*60)
-    print("Step 4: Computing Infidelities vs FCI-CASSCF")
-    print("="*60)
-    
-    hf_ci_history = mc_hf_casci.fcisolver.ci_vec_history
-    nn_ci_history = mc_nn_casci.fcisolver.ci_vec_history
-    hf_energy_history = mc_hf_casci.fcisolver.energy_history
-    nn_energy_history = mc_nn_casci.fcisolver.energy_history
-    
-    # Create temporary CASCI objects for overlap calculation
+    # Calculate overlaps for infidelity computation
     def create_temp_mc(base_mc, ci_vec):
         temp_mc = type('TempMC', (), {})()
-        temp_mc.ci = ci_vec
+        temp_mc.ci = np.array(ci_vec) if isinstance(ci_vec, list) else ci_vec
         temp_mc.mo_coeff = base_mc.mo_coeff
         temp_mc.ncas = base_mc.ncas
         temp_mc.nelecas = base_mc.nelecas
         temp_mc.ncore = base_mc.ncore
         temp_mc.mol = base_mc.mol
         return temp_mc
+    
+    # Calculate infidelities
+    hf_ci_history = mc_hf_casci.fcisolver.ci_vec_history
+    nn_ci_history = mc_nn_casci.fcisolver.ci_vec_history
     
     infidelities_hf = []
     infidelities_nn = []
@@ -314,54 +294,25 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
         infid_hf = casscf_overlap(hf_temp, mc_fci_casscf)
         infid_nn = casscf_overlap(nn_temp, mc_fci_casscf)
         
-        infidelities_hf.append(infid_hf)
-        infidelities_nn.append(infid_nn)
-        steps.append(i * 10)  # History saved every 10 steps
+        infidelities_hf.append(float(infid_hf))
+        infidelities_nn.append(float(infid_nn))
+        steps.append(i * 10)
     
     # Final infidelities
     final_infid_hf = casscf_overlap(mc_hf_casci, mc_fci_casscf)
     final_infid_nn = casscf_overlap(mc_nn_casci, mc_fci_casscf)
     
-    # Plotting
-    plt.figure(figsize=(12, 8))
-    
-    plt.semilogy(steps, infidelities_hf, 'ro-', label='HF-VQE-CASCI vs FCI-CASSCF', alpha=0.7, linewidth=2, markersize=6)
-    plt.semilogy(steps, infidelities_nn, 'bo-', label='NN-VQE-CASCI vs FCI-CASSCF', alpha=0.7, linewidth=2, markersize=6)
-    
-    plt.xlabel('VQE Optimization Step', fontsize=14)
-    plt.ylabel('Infidelity (1 - |⟨ψ|ψ_ref⟩|²)', fontsize=14)
-    plt.title('VQE-CASCI Wavefunction Infidelity vs FCI-CASSCF Reference', fontsize=16)
-    plt.legend(fontsize=12)
-    plt.grid(True, alpha=0.3)
-    plt.tick_params(axis='both', which='major', labelsize=12)
-    
-    plt.tight_layout()
-    plt.savefig('vqe_casci_infidelity_vs_fci_casscf.png', dpi=150)
-    plt.show()
-    
-    # Print summary
-    print("\n" + "="*60)
-    print("SUMMARY")
-    print("="*60)
-    print(f"FCI-CASSCF reference energy:  {e_fci_casscf:.8f} Ha")
-    print(f"HF-VQE-CASCI final energy:     {E_hf_casci:.8f} Ha")
-    print(f"NN-VQE-CASCI final energy:     {E_nn_casci:.8f} Ha")
-    print(f"\nEnergy differences from FCI-CASSCF:")
-    print(f"HF-VQE-CASCI: {(E_hf_casci - e_fci_casscf)*1000:.3f} mHa")
-    print(f"NN-VQE-CASCI: {(E_nn_casci - e_fci_casscf)*1000:.3f} mHa")
-    print(f"\nFinal infidelities vs FCI-CASSCF:")
-    print(f"HF-VQE-CASCI: {final_infid_hf:.6e}")
-    print(f"NN-VQE-CASCI: {final_infid_nn:.6e}")
-    
-    if final_infid_hf > 0:
-        print(f"Infidelity ratio (NN/HF): {final_infid_nn/final_infid_hf:.2f}")
-    
-    # Save results
+    # Prepare results
     results = {
+        "bond_length": float(d),
         "description": "VQE-CASCI infidelity vs FCI-CASSCF reference",
         "reference_energy": float(e_fci_casscf),
+        "reference_ci": fci_casscf_ci.tolist() if hasattr(fci_casscf_ci, 'tolist') else fci_casscf_ci,
+        "reference_mo": fci_casscf_mo.tolist() if hasattr(fci_casscf_mo, 'tolist') else fci_casscf_mo,
         "hf_vqe_casci_energy": float(E_hf_casci),
         "nn_vqe_casci_energy": float(E_nn_casci),
+        "hf_params": params_hf,
+        "nn_params": params_nn,
         "energy_diff_mHa": {
             "hf": float((E_hf_casci - e_fci_casscf)*1000),
             "nn": float((E_nn_casci - e_fci_casscf)*1000)
@@ -369,76 +320,52 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
         "final_infidelities": {
             "hf": float(final_infid_hf),
             "nn": float(final_infid_nn)
-
-            
         },
         "infidelity_history": {
             "steps": steps,
-            "hf": [float(x) for x in infidelities_hf],
-            "nn": [float(x) for x in infidelities_nn]
+            "hf": infidelities_hf,
+            "nn": infidelities_nn
         },
         "energy_history": {
-            "all_steps": list(range(len(hf_energy_history))),
-            "hf": [float(x) for x in hf_energy_history],
-            "nn": [float(x) for x in nn_energy_history]
+            "all_steps": list(range(len(mc_hf_casci.fcisolver.energy_history))),
+            "hf": mc_hf_casci.fcisolver.energy_history,
+            "nn": mc_nn_casci.fcisolver.energy_history
         }
     }
     
-    with open(f'energy_and_infidelity({d} bond).json', 'w') as f:
-        json.dump(results, f, indent=2)
-    
-    print("\nResults saved")
-    
     return results
-    
-def main():
-    d_1 = BOND_LENGTH
-    pos = [[0,0,0], [d_1,0,0], [2*d_1,0,0], [3*d_1,0,0]]
-    elements = ["H", "H", "H", "H"]
-    atom = [[el, tuple(c)] for el, c in zip(elements, pos)]
-        
-    # Load projection from inference.json
-    inference_path = Path("data_H4/inference.json")
-    if inference_path.exists():
-        with open(inference_path) as f:
-            inference_data = json.load(f)
-        
-        # Get the appropriate projection matrix for this bond length
-        bond_idx = get_bond_length_index(d_1, inference_data)
-        proj = np.array(inference_data["proj"][bond_idx])
-    else:
-        print("ERROR: inference.json not found!")
-        return None
-        
-    # Overlap and permutation
-    S = gto.M(atom=atom, basis="cc-pVDZ").intor("int1e_ovlp")
-    sqrtS = scipy.linalg.sqrtm(S).real
-    perm = perm_orca2pyscf(atom=atom, basis="cc-pVDZ")
-    proj = perm @ proj @ perm.T
-        
-    # Build molecule
-    mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=0)
-    ncas, nelecas = 4, 4
-        
-    # NN initial guess from projection
-    eigvals, eigvecs = eigh(proj)
-    idx = np.argsort(eigvals)[::-1]
-    sqrtS_inv = inv(sqrtS)
-    sorted_eigvecs = sqrtS_inv @ eigvecs[:, idx]
-        
-    # run classical vqe
-        
-    # HF initial guess
-    mf_hf = scf.RHF(mol)
-    mf_hf.kernel()
-    fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci = run_cas(mol,  mf_hf.mo_coeff, ncas, nelecas,solver='FCI')
-    print(f"HF-initialized CI-CAS energy: {fci_E_hf:.8f} Ha")
-        
-    # run classical vqe
-    fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci = run_cas(mol,  sorted_eigvecs, ncas, nelecas,solver='FCI')
-    print(f"NN-initialized CI-CAS energy: {fci_E_nn:.8f} Ha")
 
-    results = analyze_vqe_casci_vs_fci_casscf(d_1)
+def main():
+    bond_length = BOND_LENGTH
+    
+    # Create results directory
+    results_dir = "results/fig3"
+    ensure_dir(results_dir)
+    
+    print(f"\n{'='*60}")
+    print(f"Running VQE-CASCI experiment for bond length {bond_length}")
+    print(f"{'='*60}\n")
+    
+    # Run experiment
+    results = run_experiment(bond_length)
+    
+    if results:
+        # Save results
+        filename = f"{results_dir}/vqe_casci_results_bond({bond_length}).json"
+        with open(filename, 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        print(f"\n{'='*60}")
+        print(f"Results saved to {filename}")
+        print(f"{'='*60}")
+        
+        # Print summary
+        print("\nSUMMARY:")
+        print(f"Reference energy: {results['reference_energy']:.8f} Ha")
+        print(f"HF-VQE energy:    {results['hf_vqe_casci_energy']:.8f} Ha")
+        print(f"NN-VQE energy:    {results['nn_vqe_casci_energy']:.8f} Ha")
+        print(f"Final infidelity ratio (NN/HF): {results['final_infidelities']['nn']/results['final_infidelities']['hf']:.2f}")
+    
     return results
 
 if __name__ == "__main__":
