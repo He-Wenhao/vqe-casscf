@@ -10,7 +10,9 @@ import scipy
 from scipy.stats import gaussian_kde
 from numpy.linalg import eigh, inv
 from pyscf import gto, scf, dft
-from vqe_driver import perm_orca2pyscf, run_vqe_cas
+# from vqe_driver import perm_orca2pyscf, run_vqe_cas
+from downfolding_methods_pytorch import nelec, norbs, fock_downfolding, Solve_fermionHam, perm_orca2pyscf, LambdaQ
+
 
 mpl.rcParams['pdf.fonttype'] = 42
 FOLDER = "data_H4/H4_hyb_diss_2"
@@ -101,7 +103,6 @@ def calc_basisNN_inp_file(inp_data):
     elements = inp_data['elements']
     coordinates = inp_data['coordinates']
     atoms = [(elements[i], coordinates[i]) for i in range(len(elements))]
-    mol = gto.M(atom=atoms, basis="cc-pVDZ", verbose=0)
     S = gto.M(
         atom=atoms,  # Atomic symbols and coordinates
         basis="cc-pVDZ"
@@ -115,23 +116,11 @@ def calc_basisNN_inp_file(inp_data):
     proj = inp_data['proj']
     proj = perm @ proj @ perm.T
     proj = sqrtS @ proj @ sqrtS
-
-    # Get eigenvectors of projection matrix as orbital guess
-    eigvals, eigvecs = eigh(proj)
-    idx = np.argsort(eigvals)[::-1]
-    sqrtS_inv = inv(sqrtS)
-    mo_guess = sqrtS_inv @ eigvecs[:, idx]
     
-    # Use CASSCF with appropriate active space
-    n_atoms = len(atoms)
-    ncas, nelecas = n_atoms, n_atoms
-    
-    # Use run_vqe_cas function but invoke FCI solver
-    E, _, mo_coeff, ci_vec, mc = run_vqe_cas(mol, mo_guess, ncas, nelecas, solver='FCI',mode='CI')
-    
-    #L1 norm
-    l = np.sum(np.abs(mc.mo_coeff))
-    
+    n_fold = norbs(atom=atoms,basis='sto-3g')
+    ham = fock_downfolding(n_fold,('self-defined',-proj),False,atom=atoms, basis='cc-pVDZ')
+    E = Solve_fermionHam(ham.Ham_const, ham.int_1bd, ham.int_2bd, nele=nelec(atom=atoms, basis='sto-3G'), method='FCI')[0]
+    l = LambdaQ(ham.Ham_const,ham.int_1bd,ham.int_2bd).item()
     return E, l
 
 
@@ -185,12 +174,6 @@ def collect_other_energies(name_l, folder=FOLDER, result_folder=RESULT_FOLDER):
     with open(os.path.join(result_folder, "E_l_data.json"), "w") as f:
         json.dump(energy_data, f, indent=4)
         
-
-
-
-
-
-
 
 
 def collect_l_data(name_l, folder=FOLDER, output_folder=RESULT_FOLDER):
