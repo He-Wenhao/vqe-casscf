@@ -29,7 +29,7 @@ def test_vqe_ci(d=2.3, ncas=4, nelecas=4):
     mf_hf = scf.RHF(mol)
     mf_hf.kernel()
     
-    E_hf, params_hf, hf_orbitals, hf_ci, mc_hf = run_vqe_cas(mol, mf_hf.mo_coeff, ncas, nelecas)
+    E_hf, params_hf, hf_orbitals, hf_ci, mc_hf = run_cas(mol, mf_hf.mo_coeff, ncas, nelecas)
     print(f"HF-initialized VQE-CAS energy: {E_hf:.8f} Ha")
     
     # Extract RDMs and calculate energy
