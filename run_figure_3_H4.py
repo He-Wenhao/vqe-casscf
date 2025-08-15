@@ -339,7 +339,7 @@ def main():
     bond_length = BOND_LENGTH
     
     # Create results directory
-    results_dir = "results/fig3"
+    results_dir = "results/fig3/Data"
     ensure_dir(results_dir)
     
     print(f"\n{'='*60}")
