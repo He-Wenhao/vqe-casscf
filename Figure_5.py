@@ -11,6 +11,7 @@ from pyscf.fci.direct_spin1 import FCI as DirectSpinFCI
 import matplotlib.pyplot as plt
 from pathlib import Path
 import scipy
+import scipy.linalg as sla
 from pyscf.fci import cistring
 from pyscf import fci
 from math import comb
@@ -23,14 +24,40 @@ from vqe_driver import *
 from checker import *
 
 BOND_LENGTH = 2.3 # Just change bond length right here. Nothing else needs to be touched
-FILE = f"data/H4_hyb_diss/obs/{int(BOND_LENGTH*10-3)}.json"
+FILE = "data_H4/inference.json"
 
-def load_projection_data(filename=FILE, atom=None):
-    obs_path = Path(filename)
-    obs_data = json.load(open(obs_path))
-    proj = np.array(obs_data["proj"])
 
-    # Overlap and permutation
+def load_projection_data(filename=FILE, atom=None, bond_length=BOND_LENGTH):
+    # Load from inference.json instead of individual files
+    inference_path = Path(filename)
+    with open(inference_path, "r") as f:
+        inference_data = json.load(f)
+    
+    # Find the right index for this bond length
+    positions = inference_data['pos']
+    bond_idx = None
+    
+    for idx, pos_set in enumerate(positions):
+        first_bond = pos_set[1][0] - pos_set[0][0]
+        if abs(first_bond - bond_length) < 1e-6:
+            bond_idx = idx
+            break
+    
+    if bond_idx is None:
+        # Find closest match
+        min_diff = float('inf')
+        for idx, pos_set in enumerate(positions):
+            first_bond = pos_set[1][0] - pos_set[0][0]
+            diff = abs(first_bond - bond_length)
+            if diff < min_diff:
+                min_diff = diff
+                bond_idx = idx
+        print(f"Warning: Using closest bond length match at index {bond_idx}")
+    
+    # Get the projection matrix for this bond length
+    proj = np.array(inference_data["proj"][bond_idx])
+
+    # Overlap and permutation (rest stays the same)
     S = gto.M(atom=atom, basis="cc-pVDZ").intor("int1e_ovlp")
     sqrtS = scipy.linalg.sqrtm(S).real
     perm = perm_orca2pyscf(atom=atom, basis="cc-pVDZ")
@@ -43,6 +70,7 @@ def load_projection_data(filename=FILE, atom=None):
     sorted_eigvecs = sqrtS_inv @ eigvecs[:, idx]
 
     return sorted_eigvecs
+
 
 
 def run_fci_calculations(mol, hf_mo_coeff, nn_mo_coeff, ncas=4, nelecas=4):
@@ -163,7 +191,7 @@ def main():
     mol, atom = setup_molecule(d=BOND_LENGTH)
     ncas, nelecas = 4, 4
 
-    nn_mo_coeff = load_projection_data(FILE, atom)
+    nn_mo_coeff = load_projection_data(FILE, atom, bond_length=BOND_LENGTH)
 
     mf_hf = scf.RHF(mol)
     mf_hf.kernel()
