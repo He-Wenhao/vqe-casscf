@@ -431,11 +431,11 @@ def main():
     # HF initial guess
     mf_hf = scf.RHF(mol)
     mf_hf.kernel()
-    fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci = run_vqe_cas(mol,  mf_hf.mo_coeff, ncas, nelecas,solver='FCI')
+    fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci = run_cas(mol,  mf_hf.mo_coeff, ncas, nelecas,solver='FCI')
     print(f"HF-initialized CI-CAS energy: {fci_E_hf:.8f} Ha")
         
     # run classical vqe
-    fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci = run_vqe_cas(mol,  sorted_eigvecs, ncas, nelecas,solver='FCI')
+    fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci = run_cas(mol,  sorted_eigvecs, ncas, nelecas,solver='FCI')
     print(f"NN-initialized CI-CAS energy: {fci_E_nn:.8f} Ha")
 
     results = analyze_vqe_casci_vs_fci_casscf(d_1)
