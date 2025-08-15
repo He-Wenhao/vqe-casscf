@@ -20,7 +20,7 @@ from numpy.linalg import eigh, inv
 from utils import *
 from vqe_driver import *
 
-BOND_LENGTH = 0.7 # Just change right here. Nothing else needs to be touched.
+BOND_LENGTH = 0.4 # Just change right here. Nothing else needs to be touched.
 
 def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=True):
     # CASCI may provide g2 in reduced form, so handle different g2 formats
@@ -173,6 +173,41 @@ def run_vqe_casci(mol, mo_guess, ncas, nelecas, solver='VQE'):
     return e_tot, mc.fcisolver.params if hasattr(mc.fcisolver, 'params') else None, mo_coeff, ci_vec, mc
 
 
+def get_bond_length_index(bond_length, inference_data):
+    """
+    Map bond length to index in inference.json based on positions.
+    
+    The inference.json file contains data for 23 different H4 configurations.
+    We need to find which index corresponds to our bond length.
+    """
+    # Get positions from inference data
+    positions = inference_data['pos']
+    
+    # Calculate bond lengths for each configuration
+    # Bond length is the distance between consecutive H atoms
+    target_found = False
+    for idx, pos_set in enumerate(positions):
+        # Calculate first bond length (between H0 and H1)
+        first_bond = pos_set[1][0] - pos_set[0][0]
+        
+        # Check if this matches our target bond length (with small tolerance)
+        if abs(first_bond - bond_length) < 1e-6:
+            return idx
+    
+    # If exact match not found, find closest
+    min_diff = float('inf')
+    best_idx = 0
+    for idx, pos_set in enumerate(positions):
+        first_bond = pos_set[1][0] - pos_set[0][0]
+        diff = abs(first_bond - bond_length)
+        if diff < min_diff:
+            min_diff = diff
+            best_idx = idx
+    
+    print(f"Warning: Exact bond length {bond_length} not found in inference.json. Using closest match at index {best_idx}")
+    return best_idx
+
+
 def analyze_vqe_casci_vs_fci_casscf(bond_length):
     d = bond_length
     pos = [[0,0,0], [d,0,0], [2*d,0,0], [3*d,0,0]]
@@ -181,12 +216,18 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
     mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=0)
     ncas, nelecas = 4, 4
     
-    # Load NN projection
-    obs_path = Path(f"data/H4_hyb_diss/obs/{int(d*10-3)}.json")
-    if obs_path.exists():
-        with open(obs_path) as f:
-            obs_data = json.load(f)
-        proj = np.array(obs_data["proj"])
+    # Load NN projection from inference.json
+    inference_path = Path("data_H4/inference.json")
+    if inference_path.exists():
+        with open(inference_path) as f:
+            inference_data = json.load(f)
+        
+        # Get the appropriate projection matrix for this bond length
+        bond_idx = get_bond_length_index(d, inference_data)
+        proj = np.array(inference_data["proj"][bond_idx])
+        
+        print(f"Using projection matrix at index {bond_idx} for bond length {d}")
+        print(f"Configuration name: {inference_data['name'][bond_idx] if 'name' in inference_data else 'N/A'}")
         
         # Apply permutation
         S = mol.intor("int1e_ovlp")
@@ -201,7 +242,7 @@ def analyze_vqe_casci_vs_fci_casscf(bond_length):
         sqrtS_inv = inv(sqrtS)
         nn_orbitals = sqrtS_inv @ eigvecs[:, idx]
     else:
-        print(f"Warning: {d}.json not found, using HF orbitals for NN")
+        print(f"Warning: inference.json not found, using HF orbitals for NN")
         mf_temp = scf.RHF(mol)
         mf_temp.kernel()
         nn_orbitals = mf_temp.mo_coeff
@@ -356,12 +397,21 @@ def main():
     elements = ["H", "H", "H", "H"]
     atom = [[el, tuple(c)] for el, c in zip(elements, pos)]
         
-    # Load projection from deginated obs json file
-    obs_path = Path(f"data/H4_hyb_diss/obs/{int(d_1*10-3)}.json")
-    obs_data = np.array(scipy.json.load(open(obs_path))) if False else None
-    # actually use JSON
-    obs_data = json.load(open(obs_path))
-    proj = np.array(obs_data["proj"])
+    # Load projection from inference.json
+    inference_path = Path("data_H4/inference.json")
+    if inference_path.exists():
+        with open(inference_path) as f:
+            inference_data = json.load(f)
+        
+        # Get the appropriate projection matrix for this bond length
+        bond_idx = get_bond_length_index(d_1, inference_data)
+        proj = np.array(inference_data["proj"][bond_idx])
+        
+        print(f"Using projection matrix at index {bond_idx} for bond length {d_1}")
+        print(f"Configuration name: {inference_data['name'][bond_idx] if 'name' in inference_data else 'N/A'}")
+    else:
+        print("ERROR: inference.json not found!")
+        return None
         
     # Overlap and permutation
     S = gto.M(atom=atom, basis="cc-pVDZ").intor("int1e_ovlp")
@@ -389,7 +439,7 @@ def main():
         
     # run classical vqe
     fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci = run_vqe_cas(mol,  sorted_eigvecs, ncas, nelecas,solver='FCI')
-    print(f"HF-initialized CI-CAS energy: {fci_E_nn:.8f} Ha")
+    print(f"NN-initialized CI-CAS energy: {fci_E_nn:.8f} Ha")
 
     results = analyze_vqe_casci_vs_fci_casscf(d_1)
     return results
