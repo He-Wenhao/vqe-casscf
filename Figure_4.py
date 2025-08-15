@@ -9,9 +9,28 @@ import re
 import glob
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from vqe_driver import PennyLaneSolver, perm_orca2pyscf, ucc_ansatz_eval
+from pennylane.qchem import excitations
+from vqe_driver import PennyLaneSolver, perm_orca2pyscf
 
-def load_inference_data(filename="inference.json"):
+FILE = "data_H4/inference.json"
+
+def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
+    print(f"\nRunning CASSCF with {label} initial guess...")
+    mf_init = scf.RHF(mol)
+    mf_init.kernel()
+
+    mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
+    mc.fcisolver = PennyLaneSolver(mf_init)
+    mc.mo_coeff = mo_guess
+
+    start = time.time()
+    mc.kernel()
+    end = time.time()
+
+    print(f"CASSCF ({label} guess) took {end - start:.2f} seconds")
+    return mc
+
+def load_inference_data(filename=FILE):
     with open(filename, "r") as file:
         data = json.load(file)
     pos_l = data["pos"]
@@ -55,8 +74,8 @@ def process_index(ind, pos_l, elements_l, proj_l, name_l):
     mf_hf.kernel()
     hf_orbitals = mf_hf.mo_coeff
 
-    ucc_ansatz_eval(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
-    ucc_ansatz_eval(mol, hf_orbitals, ncas=4, nelecas=4, label="HF")
+    run_casscf_with_guess(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
+    run_casscf_with_guess(mol, hf_orbitals, ncas=4, nelecas=4, label="HF")
 
     sys.stdout.close()
     sys.stdout = sys.__stdout__
@@ -230,12 +249,12 @@ def main():
     print("=== Figure 4 Analysis ===")
     
     # Load molecular data
-    pos_l, elements_l, proj_l, name_l = load_inference_data("inference.json")
+    pos_l, elements_l, proj_l, name_l = load_inference_data(FILE)
     
     run_all_calculations(pos_l, elements_l, proj_l, name_l, max_index=23)
     
     # Extract data from log files
-    log_files = sorted(glob.glob("log_*.txt"), key=lambda x: int(re.search(r'\d+', x).group()))
+    log_files = sorted(glob.glob("cas_init_result/log_*.txt"), key=lambda x: int(re.search(r'\d+', x).group()))
     results = extract_log_data(log_files)
     
     # Print results table
