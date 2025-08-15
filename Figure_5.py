@@ -77,13 +77,13 @@ def run_fci_calculations(mol, hf_mo_coeff, nn_mo_coeff, ncas=4, nelecas=4):
     print("=== Running FCI Calculations ===")
     
     # FCI with HF initial guess
-    fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci = run_vqe_cas(
+    fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci = run_cas(
         mol, hf_mo_coeff, ncas, nelecas, solver='FCI'
     )
     print(f"HF-initialized FCI-CAS energy: {fci_E_hf:.8f} Ha")
     
     # FCI with NN initial guess
-    fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci = run_vqe_cas(
+    fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci = run_cas(
         mol, nn_mo_coeff, ncas, nelecas, solver='FCI'
     )
     print(f"NN-initialized FCI-CAS energy: {fci_E_nn:.8f} Ha")
@@ -96,13 +96,13 @@ def run_vqe_casscf_calculations(mol, hf_mo_coeff, nn_mo_coeff, ncas=4, nelecas=4
     print("\n=== Running VQE-CASSCF Calculations ===")
     
     # VQE with NN initial guess
-    E_nn, params_nn, nn_orbitals, nn_ci, mc_nn = run_vqe_cas(
+    E_nn, params_nn, nn_orbitals, nn_ci, mc_nn = run_cas(
         mol, nn_mo_coeff, ncas, nelecas
     )
     print(f"NN-initialized VQE-CAS energy: {E_nn:.8f} Ha")
 
     # VQE with HF initial guess
-    E_hf, params_hf, hf_orbitals, hf_ci, mc_hf = run_vqe_cas(
+    E_hf, params_hf, hf_orbitals, hf_ci, mc_hf = run_cas(
         mol, hf_mo_coeff, ncas, nelecas
     )
     print(f"HF-initialized VQE-CAS energy: {E_hf:.8f} Ha")
