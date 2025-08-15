@@ -10,7 +10,6 @@ import scipy
 from scipy.stats import gaussian_kde
 from numpy.linalg import eigh, inv
 from pyscf import gto, scf, dft
-# from vqe_driver import perm_orca2pyscf, run_vqe_cas
 from downfolding_methods_pytorch import nelec, norbs, fock_downfolding, Solve_fermionHam, perm_orca2pyscf, LambdaQ
 
 
