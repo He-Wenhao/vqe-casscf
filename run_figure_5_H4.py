@@ -16,13 +16,15 @@ from utils import *
 from vqe_driver import *
 from checker import *
 
-BOND_LENGTH = 2.3  # Change bond length here
+
+BOND_LENGTH = 2.3 # Just change bond length right here. Nothing else needs to be touched
 FILE = "data_H4/inference.json"
 
 def ensure_dir(directory):
     Path(directory).mkdir(parents=True, exist_ok=True)
 
 def load_projection_data(filename=FILE, atom=None, bond_length=BOND_LENGTH):
+    # Load from inference.json instead of individual files
     inference_path = Path(filename)
     with open(inference_path, "r") as f:
         inference_data = json.load(f)
@@ -51,7 +53,7 @@ def load_projection_data(filename=FILE, atom=None, bond_length=BOND_LENGTH):
     # Get the projection matrix for this bond length
     proj = np.array(inference_data["proj"][bond_idx])
 
-    # Overlap and permutation
+    # Overlap and permutation (rest stays the same)
     S = gto.M(atom=atom, basis="cc-pVDZ").intor("int1e_ovlp")
     sqrtS = scipy.linalg.sqrtm(S).real
     perm = perm_orca2pyscf(atom=atom, basis="cc-pVDZ")
@@ -64,6 +66,8 @@ def load_projection_data(filename=FILE, atom=None, bond_length=BOND_LENGTH):
     sorted_eigvecs = sqrtS_inv @ eigvecs[:, idx]
 
     return sorted_eigvecs
+
+
 
 def run_fci_calculations(mol, hf_mo_coeff, nn_mo_coeff, ncas=4, nelecas=4):
     print("=== Running FCI Calculations ===")
@@ -83,6 +87,7 @@ def run_fci_calculations(mol, hf_mo_coeff, nn_mo_coeff, ncas=4, nelecas=4):
     return (fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci,
             fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci)
 
+
 def run_vqe_casscf_calculations(mol, hf_mo_coeff, nn_mo_coeff, ncas=4, nelecas=4):
     print("\n=== Running VQE-CASSCF Calculations ===")
     
@@ -98,9 +103,9 @@ def run_vqe_casscf_calculations(mol, hf_mo_coeff, nn_mo_coeff, ncas=4, nelecas=4
     )
     print(f"HF-initialized VQE-CAS energy: {E_hf:.8f} Ha")
 
-    return (E_hf, params_hf, hf_orbitals, hf_ci, mc_hf, 
-            E_nn, params_nn, nn_orbitals, nn_ci, mc_nn)
+    return (E_hf, params_hf, hf_orbitals, hf_ci, mc_hf, E_nn, params_nn, nn_orbitals, nn_ci, mc_nn)
 
+# Main scanning function
 def extended_vqe_optimization_scan(mol, mo1, mo2, params1, params2, ncas, nelecas, t_min=-0.3, t_max=1.3, n_points=21):
     S = mol.intor("int1e_ovlp")
     ts = np.linspace(t_min, t_max, n_points)
@@ -116,6 +121,7 @@ def extended_vqe_optimization_scan(mol, mo1, mo2, params1, params2, ncas, neleca
     
     for i, t in enumerate(ts):
         mo_t = interpolate_mo_cayley(mo1, mo2, t, S)
+
         params_init = (1 - t) * params1 + t * params2
         
         print(f"\nOptimizing at t={t:.4f}...")
@@ -125,33 +131,29 @@ def extended_vqe_optimization_scan(mol, mo1, mo2, params1, params2, ncas, neleca
             solver='VQE', vqe_params=params_init
         )
         energies_opt.append(e_tot)
-        params_opt.append(params_init.tolist() if hasattr(params_init, 'tolist') else params_init)
         converged.append(True)
     
     return ts, np.array(energies_opt), params_opt, converged
 
-def run_experiment(bond_length):
+def run_experiment(bond_length=BOND_LENGTH):
     mol, atom = setup_molecule(d=bond_length)
     ncas, nelecas = 4, 4
 
-    # Get NN and HF orbitals
     nn_mo_coeff = load_projection_data(FILE, atom, bond_length=bond_length)
+
     mf_hf = scf.RHF(mol)
     mf_hf.kernel()
     hf_mo_coeff = mf_hf.mo_coeff
 
     # Run FCI calculations
-    (fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci,
-     fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci) = run_fci_calculations(
+    (fci_E_hf, fci_params_hf, fci_hf_orbitals, fci_hf_ci, mc_hf_ci, fci_E_nn, fci_params_nn, fci_nn_orbitals, fci_nn_ci, mc_nn_ci) = run_fci_calculations(
         mol, hf_mo_coeff, nn_mo_coeff, ncas, nelecas)
     
     # Run VQE calculations  
-    (E_hf, params_hf, hf_orbitals, hf_ci, mc_hf,
-     E_nn, params_nn, nn_orbitals, nn_ci, mc_nn) = run_vqe_casscf_calculations(
+    (E_hf, params_hf, hf_orbitals, hf_ci, mc_hf, E_nn, params_nn, nn_orbitals, nn_ci, mc_nn) = run_vqe_casscf_calculations(
         mol, hf_mo_coeff, nn_mo_coeff, ncas, nelecas)
 
     # Sanity checks
-    print("\n=== Sanity Checks ===")
     analyze_rdms(mc_hf_ci, fci_hf_ci, mc_nn_ci, fci_nn_ci, ncas, nelecas)
     infidelities_and_energies(mc_hf, mc_nn, mc_hf_ci, mc_nn_ci, mol)
     orbital_difference(hf_orbitals, nn_orbitals, fci_hf_orbitals, fci_nn_orbitals)
@@ -162,19 +164,16 @@ def run_experiment(bond_length):
         ncas, nelecas, t_min=-0.2, t_max=1.2, n_points=29
     )
 
-    # Prepare results
+    # Save results for further analysis
     results = {
-        'bond_length': float(bond_length),
         't': ts_ext.tolist(),
         'energy': E_opt_ext.tolist(),
-        'converged': [bool(c) for c in converged_ext],
+        'converged': converged_ext,
         'params': params_opt_ext,
         'E_hf_original': float(E_hf),
-        'E_nn_original': float(E_nn),
-        'fci_E_hf': float(fci_E_hf),
-        'fci_E_nn': float(fci_E_nn)
+        'E_nn_original': float(E_nn)
     }
-    
+
     return results
 
 def main():
@@ -208,7 +207,6 @@ def main():
     
     print("\nSUMMARY:")
     print(f"Bond length: {bond_length} Å")
-    print(f"Energy range: [{energies.min():.8f}, {energies.max():.8f}] Ha")
     print(f"Global minimum: {energies[idx_min]:.8f} Ha at t={ts[idx_min]:.2f}")
     print(f"Global maximum: {energies[idx_max]:.8f} Ha at t={ts[idx_max]:.2f}")
     print(f"Barrier height: {(energies[idx_max] - energies[idx_min]) * 627.509:.2f} kcal/mol")
