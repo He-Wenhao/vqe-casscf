@@ -5,14 +5,17 @@ from pyscf import gto, scf, mcscf
 import sys
 import time
 import os
-import re
-import glob
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from pennylane.qchem import excitations
 from vqe_driver import PennyLaneSolver, perm_orca2pyscf
 
 FILE = "data_H4/inference.json"
+
+# Load data once globally
+with open(FILE, "r") as file:
+    data = json.load(file)
+pos_l = data["pos"]
+elements_l = data["elements"]
+proj_l = data["proj"]
+name_l = data["name"]
 
 def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     print(f"\nRunning CASSCF with {label} initial guess...")
@@ -30,17 +33,7 @@ def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     print(f"CASSCF ({label} guess) took {end - start:.2f} seconds")
     return mc
 
-def load_inference_data(filename=FILE):
-    with open(filename, "r") as file:
-        data = json.load(file)
-    pos_l = data["pos"]
-    elements_l = data["elements"]
-    proj_l = data["proj"]
-    name_l = data["name"]
-
-    return pos_l, elements_l, proj_l, name_l
-
-def process_index(ind, pos_l, elements_l, proj_l, name_l):
+def process_index(ind):
     pos = pos_l[ind]
     elements = elements_l[ind]
     proj = np.array(proj_l[ind])
@@ -48,7 +41,7 @@ def process_index(ind, pos_l, elements_l, proj_l, name_l):
 
     atom = [[ele, tuple(coord)] for ele, coord in zip(elements, pos)]
 
-    log_path = f"results/fig4/cas_init_result/log_{name[:-5]}.txt"
+    log_path = f"cas_init_result/log_{name[:-5]}.txt"
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     sys.stdout = open(log_path, "w")
 
@@ -67,30 +60,20 @@ def process_index(ind, pos_l, elements_l, proj_l, name_l):
     rand_orbitals = sorted_eigvecs
 
     # Build molecule
-    mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=4, output=log_path)
+    mol = gto.M(atom=atom, basis='ccpVDZ', spin=0, charge=0, verbose=4, output=log_path)
 
     # Run HF
     mf_hf = scf.RHF(mol)
     mf_hf.kernel()
     hf_orbitals = mf_hf.mo_coeff
 
+    # Run CASSCFs
     run_casscf_with_guess(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
     run_casscf_with_guess(mol, hf_orbitals, ncas=4, nelecas=4, label="HF")
 
     sys.stdout.close()
     sys.stdout = sys.__stdout__
 
-def run_all_calculations(pos_l, elements_l, proj_l, name_l, max_index=23):
-    for i in range(max_index):
-        process_index(i, pos_l, elements_l, proj_l, name_l)
-
-def main():
-    # Load molecular data
-    pos_l, elements_l, proj_l, name_l = load_inference_data(FILE)
-    
-    run_all_calculations(pos_l, elements_l, proj_l, name_l, max_index=23)
-
-    print("Files saved to results/fig4/cas_init_result/")
-
 if __name__ == "__main__":
-    main()
+    for i in range(0,23):
+        process_index(i)
