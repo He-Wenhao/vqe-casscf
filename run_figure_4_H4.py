@@ -1,0 +1,96 @@
+import json
+import numpy as np
+import scipy
+from pyscf import gto, scf, mcscf
+import sys
+import time
+import os
+import re
+import glob
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from pennylane.qchem import excitations
+from vqe_driver import PennyLaneSolver, perm_orca2pyscf
+
+FILE = "data_H4/inference.json"
+
+def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
+    print(f"\nRunning CASSCF with {label} initial guess...")
+    mf_init = scf.RHF(mol)
+    mf_init.kernel()
+
+    mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
+    mc.fcisolver = PennyLaneSolver(mf_init)
+    mc.mo_coeff = mo_guess
+
+    start = time.time()
+    mc.kernel()
+    end = time.time()
+
+    print(f"CASSCF ({label} guess) took {end - start:.2f} seconds")
+    return mc
+
+def load_inference_data(filename=FILE):
+    with open(filename, "r") as file:
+        data = json.load(file)
+    pos_l = data["pos"]
+    elements_l = data["elements"]
+    proj_l = data["proj"]
+    name_l = data["name"]
+
+    return pos_l, elements_l, proj_l, name_l
+
+def process_index(ind, pos_l, elements_l, proj_l, name_l):
+    pos = pos_l[ind]
+    elements = elements_l[ind]
+    proj = np.array(proj_l[ind])
+    name = name_l[ind]
+
+    atom = [[ele, tuple(coord)] for ele, coord in zip(elements, pos)]
+
+    log_path = f"results/fig4/cas_init_result/log_{name[:-5]}.txt"
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    sys.stdout = open(log_path, "w")
+
+    print(name)
+    print(atom)
+
+    # Overlap and projection matrix processing
+    S = gto.M(atom=atom, basis="cc-pVDZ").intor("int1e_ovlp")
+    sqrtS = scipy.linalg.sqrtm(S).real
+    perm = perm_orca2pyscf(atom=atom, basis="cc-pVDZ")
+    proj = perm @ proj @ perm.T
+    eigvals, eigvecs = np.linalg.eig(proj)
+    idx = np.argsort(eigvals)[::-1]
+    sorted_eigvecs = eigvecs[:, idx]
+    sorted_eigvecs = np.linalg.inv(sqrtS) @ sorted_eigvecs
+    rand_orbitals = sorted_eigvecs
+
+    # Build molecule
+    mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=4, output=log_path)
+
+    # Run HF
+    mf_hf = scf.RHF(mol)
+    mf_hf.kernel()
+    hf_orbitals = mf_hf.mo_coeff
+
+    run_casscf_with_guess(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
+    run_casscf_with_guess(mol, hf_orbitals, ncas=4, nelecas=4, label="HF")
+
+    sys.stdout.close()
+    sys.stdout = sys.__stdout__
+
+def run_all_calculations(pos_l, elements_l, proj_l, name_l, max_index=23):
+    for i in range(max_index):
+        process_index(i, pos_l, elements_l, proj_l, name_l)
+
+def main():
+    # Load molecular data
+    pos_l, elements_l, proj_l, name_l = load_inference_data(FILE)
+    
+    run_all_calculations(pos_l, elements_l, proj_l, name_l, max_index=23)
+
+    print("Files saved to results/fig4/cas_init_result/")
+
+if __name__ == "__main__":
+    main()
