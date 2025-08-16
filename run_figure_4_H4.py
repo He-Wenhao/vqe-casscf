@@ -41,7 +41,7 @@ def process_index(ind):
 
     atom = [[ele, tuple(coord)] for ele, coord in zip(elements, pos)]
 
-    log_path = f"cas_init_result/log_{name[:-5]}.txt"
+    log_path = f"results/fig4/cas_init_result/log_{name[:-5]}.txt"
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     sys.stdout = open(log_path, "w")
 
@@ -77,3 +77,5 @@ def process_index(ind):
 if __name__ == "__main__":
     for i in range(0,23):
         process_index(i)
+
+    print("Files saved to results/fig4/cas_init_result/")
