@@ -201,11 +201,6 @@ def collect_l_data(name_l, folder=FOLDER, output_folder=RESULT_FOLDER):
     print(f"L data saved to {output_folder}/E_l_data.json")
     
 
-
-
-
-
-
 def main():
     # Initialize data structures
     initialize_data_structures()
@@ -222,20 +217,8 @@ def main():
     # Collect energies from other methods
     collect_other_energies(name_l, FOLDER)
     
-    # Plot energy distribution
-    #plot_energy_distribution(methods, energy_data, name_l, method_index, colors)
-    
     # Collect L1 norm data
     collect_l_data(name_l, FOLDER)
-    
-    # Plot L1 norm distribution
-    #plot_l_norm_distribution(l_data, name_l, method_index, colors, methods)
-    
-    # Plot molecule cartoon with error
-    #ax1 = plot_cartoon_with_error(energy_data, name_l, method_index, methods)
-    
-    # Save legend separately
-    #save_legend_separately(ax1)
     
 
 if __name__ == "__main__":
