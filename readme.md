@@ -38,7 +38,7 @@ conda env create -f environment.yml
 
 ## Tests
 
-* code for figure 2:```Figure_2.py```
-* code for figure 3:```Figure_3.py```
-* code for figure 4:```Figure_4.py``` (this file contains the energy difference curve for Figure 5)
-* code for figure 5:```Figure_5.py```
+* code for figure 2:```run_figure_2_H4.py```
+* code for figure 3:```run_figure_3_H4.py```
+* code for figure 4:```run_figure_4_H4.py``` (this file contains the energy difference curve for Figure 5)
+* code for figure 5:```run_figure_5_H4.py```
