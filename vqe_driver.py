@@ -1,6 +1,7 @@
 import pennylane as qml
 from pennylane import numpy as pnp
 import numpy as np
+from numpy.linalg import norm
 from openfermion import InteractionOperator, get_fermion_operator
 from openfermion.transforms import jordan_wigner
 from openfermion import get_sparse_operator
@@ -29,6 +30,7 @@ def pennylane_vqe(H_const, h1, g2, nele, init_params=None):
     qub_ham = jordan_wigner(ferm_ham)
     n_qubits = max(i for term in qub_ham.terms for i, _ in term) + 1
     Hmat = get_sparse_operator(qub_ham, n_qubits).toarray()
+    assert norm(Hmat - Hmat.conj().T) < 1e-5, f"Hmat not Hermitian"
     Hmat = (Hmat + Hmat.conj().T) / 2
     H = qml.Hermitian(Hmat, wires=range(n_qubits))
 
@@ -251,6 +253,7 @@ def ucc_ansatz_eval(mol, mo_guess, ncas, nelecas, label="", solver='VQE', vqe_pa
     qub_ham = jordan_wigner(ferm_ham)
     n_qubits = max(i for term in qub_ham.terms for i, _ in term) + 1
     Hmat = get_sparse_operator(qub_ham, n_qubits).toarray()
+    assert norm(Hmat - Hmat.conj().T) < 1e-5, f"Hmat not Hermitian"
     Hmat = (Hmat + Hmat.conj().T) / 2
     H = qml.Hermitian(Hmat, wires=range(n_qubits))
 
