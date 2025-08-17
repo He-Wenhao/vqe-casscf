@@ -1,6 +1,7 @@
 import pennylane as qml
 from pennylane import numpy as pnp
 import numpy as np
+from numpy.linalg import norm
 from openfermion import InteractionOperator, get_fermion_operator
 from openfermion.transforms import jordan_wigner
 from openfermion import get_sparse_operator
