@@ -33,7 +33,6 @@ def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     # Capture counts from PySCF callback
     counts = {"macro": 0, "jk": 0, "micro": 0}
     def _cb(envs):
-        # envs typically has: imacro, njk, imicro, e_tot, |grad|, etc.
         if "imacro" in envs:
             counts["macro"] = max(counts["macro"], int(envs["imacro"]))
         if "njk" in envs:
