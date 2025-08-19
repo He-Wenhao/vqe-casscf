@@ -28,7 +28,6 @@ def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
     mc.fcisolver = PennyLaneSolver(mf_init)
     mc.mo_coeff = mo_guess
-    mc.max_cycle = max(getattr(mc, "max_cycle", 50), 1)
     mc.verbose = 0               # suppress PySCF banner so we control output
 
     # Capture counts from PySCF callback
