@@ -21,24 +21,24 @@ name_l = data["name"]
 def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     print(f"\nRunning CASSCF with {label} initial guess...")
 
-    mf_init = scf.RHF(mol)
-    mf_init.verbose = 0
-    mf_init.kernel()
+    mf_init = scf.RHF(mol); mf_init.kernel()
 
     mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
     mc.fcisolver = PennyLaneSolver(mf_init)
     mc.mo_coeff = mo_guess
-    mc.verbose = 0               # suppress PySCF banner so we control output
+    mc.verbose = 0  # suppress PySCF banner so we control output
 
-    # Capture counts from PySCF callback
+    # Track counts and print
     counts = {"macro": 0, "jk": 0, "micro": 0}
     def _cb(envs):
         if "imacro" in envs:
-            counts["macro"] = max(counts["macro"], int(envs["imacro"]))
+            counts["macro"] = int(envs["imacro"])
         if "njk" in envs:
             counts["jk"] = max(counts["jk"], int(envs["njk"]))
         if "imicro" in envs:
             counts["micro"] = max(counts["micro"], int(envs["imicro"]))
+        if "e_tot" in envs:
+            print(f"macro iter {counts['macro']:2d}  CASSCF E = {envs['e_tot']:.14f}")
     mc.callback = _cb
 
     t0 = time.time()
