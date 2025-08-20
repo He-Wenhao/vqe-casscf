@@ -20,35 +20,60 @@ name_l = data["name"]
 
 def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     print(f"\nRunning CASSCF with {label} initial guess...")
-
     mf_init = scf.RHF(mol); mf_init.kernel()
-
     mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
     mc.fcisolver = PennyLaneSolver(mf_init)
     mc.mo_coeff = mo_guess
     mc.verbose = 0  # suppress PySCF banner so we control output
-
+    
+    # Count VQE calls directly
+    vqe_call_count = {"count": 0}
+    original_kernel = mc.fcisolver.kernel
+    
+    def wrapped_kernel(*args, **kwargs):
+        vqe_call_count["count"] += 1
+        return original_kernel(*args, **kwargs)
+    
+    mc.fcisolver.kernel = wrapped_kernel
+    
     # Track counts and print
-    counts = {"macro": 0, "jk": 0, "micro": 0}
+    counts = {"macro": 0, "jk_total": 0, "jk_current_macro_max": 0, "last_macro": 0}
     def _cb(envs):
         if "imacro" in envs:
-            counts["macro"] = int(envs["imacro"])
+            current_macro = int(envs["imacro"])
+            
+            if current_macro > counts["last_macro"] and counts["last_macro"] > 0:
+                counts["jk_total"] += counts["jk_current_macro_max"]
+                counts["jk_current_macro_max"] = 0
+            
+            counts["macro"] = current_macro
+            counts["last_macro"] = current_macro
+            
         if "njk" in envs:
-            counts["jk"] = max(counts["jk"], int(envs["njk"]))
-        if "imicro" in envs:
-            counts["micro"] = max(counts["micro"], int(envs["imicro"]))
+            # Track the maximum njk within this macro iteration
+            counts["jk_current_macro_max"] = max(counts["jk_current_macro_max"], int(envs["njk"]))
+            
         if "e_tot" in envs:
             print(f"macro iter {counts['macro']:2d}  CASSCF E = {envs['e_tot']:.14f}")
+    
     mc.callback = _cb
-
     t0 = time.time()
     e_tot, *_ = mc.kernel()
     t1 = time.time()
-
-    print(f"CASSCF converged in {counts['macro']} macro ({counts['jk']} JK {counts['micro']} micro)")
+    
+    # Add the final macro iteration's JK count
+    if counts["macro"] > 0:
+        counts["jk_total"] += counts["jk_current_macro_max"]
+    
+    # Calculate micro so that macro + micro = VQE calls
+    total_vqe = vqe_call_count["count"]
+    macro = counts["macro"]
+    micro = total_vqe - macro
+    
+    print(f"CASSCF converged in {macro} macro ({counts['jk_total']} JK {micro} micro)")
     print(f"CASSCF energy = {e_tot:.14f}")
-
     print(f"CASSCF ({label} guess) took {t1 - t0:.2f} seconds")
+    print(f"VQE calls: {total_vqe} = {macro} macro + {micro} micro")
     return mc
 
 
@@ -79,7 +104,7 @@ def process_index(ind):
     rand_orbitals = sorted_eigvecs
 
     # Build molecule
-    mol = gto.M(atom=atom, basis='ccpVDZ', spin=0, charge=0, verbose=4, output=log_path)
+    mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=4, output=log_path)
 
     # Run HF
     mf_hf = scf.RHF(mol)
