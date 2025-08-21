@@ -10,8 +10,11 @@ import scipy
 from scipy.stats import gaussian_kde
 from numpy.linalg import eigh, inv
 from pyscf import gto, scf, dft
-from downfolding_methods_pytorch import nelec, norbs, fock_downfolding, Solve_fermionHam, perm_orca2pyscf, LambdaQ
-
+from pyscf.fci.direct_spin1 import FCI as DirectSpinFCI
+import torch
+import json
+from functools import reduce
+from vqe_driver import *
 
 mpl.rcParams['pdf.fonttype'] = 42
 FOLDER = "data_H4/H4_hyb_diss_2"
@@ -20,6 +23,164 @@ RESULT_FOLDER = "results/fig2/"
 num_chains = 25  # Number of chains
 chain_length = 4  # Number of H atoms per chain
 bond_length_interval = 0.1
+device = 'cpu'
+
+class Fermi_Ham:
+    def __init__(self,Ham_const = None,int_1bd = None,int_2bd = None):
+        self.Ham_const = Ham_const
+        self.int_1bd = int_1bd
+        self.int_2bd = int_2bd
+    # initialize with molecule configuration
+    def pyscf_init(self,**kargs):
+        self.mol = gto.Mole()
+        self.mol.build(**kargs)
+    # calculate fermionic Hamiltonian in terms of atomic orbital
+    # notice: this is not orthonormalized
+    def calc_Ham_AO(self): 
+        self._int_1bd_AO = self.mol.intor_symmetric('int1e_kin') + self.mol.intor_symmetric('int1e_nuc')
+        self._int_2bd_AO = self.mol.intor('int2e')
+        self.Ham_const = self.mol.energy_nuc()
+        # tensorize
+        self._int_1bd_AO = torch.tensor(self._int_1bd_AO,device=device)
+        self._int_2bd_AO = torch.tensor(self._int_2bd_AO,device=device)
+    # use a basis to othonormalize it
+    # each base vector v is a column vector, basis=[v1,v2,...,vn]
+    # we can only keep first n_cut basis vectors
+    # basis must satisfy basis.T @ overlap @ basis = identity
+    def calc_Ham_othonormalize(self,basis,ncut):
+        cbasis = basis[:,:ncut]
+        self.basis = cbasis
+        self.int_1bd = torch.einsum('qa,ws,qw -> as',cbasis,cbasis,self._int_1bd_AO)
+        
+        self.int_2bd = torch.einsum('qa,ws,ed,rf,qwer -> asdf',cbasis,cbasis,cbasis,cbasis,self._int_2bd_AO) 
+        
+    def check_AO(self):
+        print('AOs:',self.mol.ao_labels())
+
+def LambdaQ(Ham_const,int_1bd,int_2bd,backend=torch):
+    trace = backend.trace
+    einsum = backend.einsum
+    abs = backend.abs
+    sum = backend.sum
+
+    h = int_1bd
+    g = int_2bd
+    N = h.shape[0]
+
+    # Î»_C = | sum_p h_pp + 1/2 sum_{p,r} g_pprr - 1/4 sum_{p,r} g_prrp |
+    diag_h = trace(h)
+    g_pprr = einsum('pprr->', g)
+    g_prrp = einsum('prrp->', g)  # permute and sum over r â†’ g[p,r,r,p]
+    lambda_C = abs(diag_h + 0.5 * g_pprr - 0.25 * g_prrp+Ham_const)
+
+    # Î»_T = sum_{p,q} | h_pq + sum_r g_pqrr - 1/2 sum_r g_prrq |
+    sum_r_g_pqrr = einsum('pqrr->pq', g)
+    sum_r_g_prrq = einsum('prrq->pq', g)  # permute and sum over r â†’ g[p,r,*,q]
+    T_term = h + sum_r_g_pqrr - 0.5 * sum_r_g_prrq
+    lambda_T = sum(abs(T_term))
+
+    # Î»_V' = 1/2 sum_{p>r, s>q} |g_pqrs - g_psrq| + 1/4 sum_{pqrs} |g_pqrs|
+    indices = backend.arange(N)
+    p, q, r, s = backend.meshgrid(indices, indices, indices, indices, indexing='ij')
+    mask = (p > r) & (s > q)
+    diff = g[p, q, r, s] - g[p, s, r, q]
+    lambda_V_prime_1 = 0.5 * sum(abs(diff[mask]))
+    lambda_V_prime_2 = 0.25 * sum(abs(g))
+    lambda_V_prime = lambda_V_prime_1 + lambda_V_prime_2
+    return lambda_C + lambda_T + lambda_V_prime
+
+def fock_downfolding(n_folded,fock_method,QO,**kargs):
+    ham = Fermi_Ham()
+    # initilize with molecule configuration
+    ham.pyscf_init(**kargs)
+    # run HF, get Fock and overlap matrix
+    ham.mol.verbose = 0
+    # Function to diagonalize the Fock matrix
+    def eig(h, s):
+        d, t = np.linalg.eigh(s)
+        x = t[:, d > 1e-8] / np.sqrt(d[d > 1e-8])
+        xhx = reduce(np.dot, (x.T, h, x))
+        e, c = np.linalg.eigh(xhx)
+        c = np.dot(x, c)
+        return e, c
+    def eig_torch(h, s):
+        d, t = torch.linalg.eigh(s)
+        x = t[:, d > 1e-8] / torch.sqrt(d[d > 1e-8])
+        xhx = reduce(torch.dot, (x.T, h, x))
+        e, c = torch.linalg.eigh(xhx)
+        c = torch.dot(x, c)
+        return e, c
+
+    # Perform RHF calculation as a starting point
+    if fock_method == 'HF':
+        myhf = scf.RHF(ham.mol)
+        myhf.eig = eig
+        myhf.kernel()
+        fock_AO = myhf.get_fock()
+    elif fock_method == 'B3LYP':
+        myhf = scf.RKS(ham.mol)
+        myhf.xc = 'B3LYP'
+        myhf.eig = eig
+        myhf.kernel()
+        fock_AO = myhf.get_fock()
+    elif fock_method == 'lda,vwn':
+        myhf = scf.RKS(ham.mol)
+        myhf.xc = 'lda,vwn'
+        myhf.eig = eig
+        myhf.kernel()
+        fock_AO = myhf.get_fock()
+    elif fock_method == 'EGNN':
+        sys.path.append('/home/hewenhao/Documents/wenhaohe/research/VQE_downfold')
+        from get_fock import get_NN_fock
+        fock_AO = get_NN_fock(ham.mol)
+    elif fock_method[0] == 'self-defined':
+        fock_AO = fock_method[1]
+    else:
+        raise TypeError('fock_method ', fock_method, ' does not exist')
+    overlap = ham.mol.intor('int1e_ovlp')
+    # solve generalized eigenvalue problem, the generalized eigen vector is new basis
+    _energy, basis = eig(fock_AO,overlap)
+    basis = torch.tensor(basis,device=device)
+    #print('my basis:\n',basis)
+    #print('basic basis:\n',myhf.mo_coeff)
+    # if quasi orbital is used
+    if QO:
+        half_nele = sum(ham.mol.nelec) // 2
+        # filled orbitals
+        fi_orbs = basis[:,:half_nele]
+        # W matrix from Eq. (33) in https://journals.aps.org/prb/pdf/10.1103/PhysRevB.78.245112
+        Wmat = (overlap - overlap @ fi_orbs @ fi_orbs.T @ overlap)
+        # diagonalize W_mat, find maximal eigen states
+        #Wmat_orth = overlap_mh @ Wmat @ overlap_mh
+        _energy2, Weig = torch.linalg.eigh(-Wmat)
+        print('energy2:',_energy2)
+        emp_orbs = (torch.eye(overlap.shape[0]) - fi_orbs @ fi_orbs.T @ overlap ) @ Weig @ scipy.linalg.fractional_matrix_power(-torch.diag(_energy2), (-1/2)) 
+        # build new basis
+        QO_basis = torch.hstack( (fi_orbs , emp_orbs[:,:overlap.shape[0]-half_nele]) ) 
+        basis = QO_basis
+    # calculate downfolding hamiltonian accroding to basis
+    ham.calc_Ham_AO()   # calculate fermionic hamiltonian on AO basis
+    ham.calc_Ham_othonormalize(basis,n_folded) # fermionic hamiltonian on new basis
+    # save the halmiltonian
+    return ham
+
+# return the total number of basis
+def norbs(**kargs):
+    ham = Fermi_Ham()
+    # initilize with molecule configuration
+    ham.pyscf_init(**kargs)
+    # run HF, get Fock and overlap matrix
+    overlap = ham.mol.intor('int1e_ovlp')
+    return overlap.shape[0]
+
+# return the total number of electrons
+def nelec(**kargs):
+    ham = Fermi_Ham()
+    # initilize with molecule configuration
+    ham.pyscf_init(**kargs)
+    # run HF, get Fock and overlap matrix
+    total_electrons = ham.mol.nelectron
+    return total_electrons
 
 
 def initialize_data_structures(result_folder=RESULT_FOLDER):
@@ -102,24 +263,51 @@ def calc_basisNN_inp_file(inp_data):
     elements = inp_data['elements']
     coordinates = inp_data['coordinates']
     atoms = [(elements[i], coordinates[i]) for i in range(len(elements))]
-    S = gto.M(
-        atom=atoms,  # Atomic symbols and coordinates
-        basis="cc-pVDZ"
-    ).intor("int1e_ovlp")
-    sqrtS = scipy.linalg.sqrtm(S).real
-    perm = perm_orca2pyscf(
-        atom=atoms,  # Atomic symbols and coordinates
-        basis="cc-pVDZ"
-    )
-    
-    proj = inp_data['proj']
-    proj = perm @ proj @ perm.T
-    proj = sqrtS @ proj @ sqrtS
-    
-    n_fold = norbs(atom=atoms,basis='sto-3g')
-    ham = fock_downfolding(n_fold,('self-defined',-proj),False,atom=atoms, basis='cc-pVDZ')
-    E = Solve_fermionHam(ham.Ham_const, ham.int_1bd, ham.int_2bd, nele=nelec(atom=atoms, basis='sto-3G'), method='FCI')[0]
-    l = LambdaQ(ham.Ham_const,ham.int_1bd,ham.int_2bd).item()
+
+    mol = gto.M(atom=atoms, basis="cc-pVDZ")
+    S = mol.intor("int1e_ovlp")
+    S = 0.5*(S+S.T)
+
+    s, Us = np.linalg.eigh(S); s = np.clip(s, 1e-12, None)
+    sqrtS = Us @ np.diag(np.sqrt(s)) @ Us.T
+    inv_sqrtS = Us @ np.diag(1.0/np.sqrt(s)) @ Us.T
+
+    perm = perm_orca2pyscf(atom=atoms, basis="cc-pVDZ")
+    P = inp_data['proj']
+    P = perm @ P @ perm.T
+    P = 0.5*(P+P.T)
+    P_ortho = sqrtS @ P @ sqrtS
+    P_ortho = 0.5*(P_ortho + P_ortho.T)
+
+    ncas = norbs(atom=atoms, basis='sto-3g')
+
+    ham = fock_downfolding(ncas, ('self-defined', -P_ortho), False, atom=atoms, basis='cc-pVDZ')
+
+    def _to_np(x):
+        try:
+            if isinstance(x, torch.Tensor):
+                return x.detach().cpu().numpy()
+        except Exception:
+            pass
+        return np.asarray(x, dtype=float)
+
+    H0 = float(_to_np(ham.Ham_const))
+    h1 = _to_np(ham.int_1bd)
+    g2 = _to_np(ham.int_2bd)
+
+    tot = nelec(atom=atoms, basis='sto-3G')
+    nele_tuple = (tot // 2, tot // 2)
+
+    # Solve hamiltonian with PySCF
+    fci_solver = DirectSpinFCI()
+    fci_solver.spin = 0
+    fci_solver.nroots = 1
+
+    e_ci, ci_vec = fci_solver.kernel(h1, g2, ncas, nele_tuple)
+    E = H0 + float(e_ci)
+
+    l = float(LambdaQ(ham.Ham_const, ham.int_1bd, ham.int_2bd))
+
     return E, l
 
 
