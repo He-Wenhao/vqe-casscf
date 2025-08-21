@@ -14,7 +14,7 @@ from pyscf.fci.direct_spin1 import FCI as DirectSpinFCI
 import torch
 import json
 from functools import reduce
-from vqe_driver import *
+from vqe_driver import perm_orca2pyscf
 
 mpl.rcParams['pdf.fonttype'] = 42
 FOLDER = "data_H4/H4_hyb_diss_2"
