@@ -11,7 +11,7 @@ START = 0.3
 STOP  = 2.3
 STEP  = 0.1
 NCAS, NELECAS = 4, 4
-OUT_DIR = Path("results/VQE-CASSCF(HF)")
+OUT_DIR = Path("results/VQE-CASSCF")
 OUT_FILE = OUT_DIR / "vqe_casscf_hf_energies.json"
 
 def bond_grid(start=START, stop=STOP, step=STEP):
