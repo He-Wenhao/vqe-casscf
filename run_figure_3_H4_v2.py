@@ -126,17 +126,18 @@ class PennyLaneSolverCASCI:
         self.params = None
         self.energy_history = []
         self.ci_vec_history = []
+        
         self.spin = 0
         wef = self.spin  # keep attribute access compatible if used elsewhere
         self.nroots = 1
         self.root = 0
+        
         self.classical = DirectSpinFCI()
         self.classical.spin = self.spin
         self.classical.nroots = self.nroots
         self.classical.root = self.root
 
     def kernel(self, h1e, g2e, norb, nelec, ci0=None, verbose=0, max_memory=None, ecore=None, **kwargs):
-        # IMPORTANT: include nuclear repulsion in constant so totals are comparable
         H_const = ecore if ecore is not None else self._mf.energy_nuc()
         nele = nelec[0] + nelec[1] if isinstance(nelec, (tuple, list)) else nelec
         E, p, ci_vec, e_hist, ci_hist = pennylane_vqe_casci(
@@ -145,6 +146,7 @@ class PennyLaneSolverCASCI:
         self.params = p
         self.energy_history = e_hist
         self.ci_vec_history = ci_hist
+        
         return E, np.array(ci_vec)
 
     def make_rdm1(self, ci_vec, ncas, nelecas):
