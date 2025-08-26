@@ -30,7 +30,7 @@ def _get_bond_length_index(bond_length, inference_data):
             return idx
             
     # closest match if fails (this should never happen)
-    print(f"Warning: Using closest bond length match at index {bond_idx}")
+    print(f"Warning: Using closest bond length match.")
     diffs = [abs(ps[1][0] - ps[0][0] - bond_length) for ps in inference_data["pos"]]
     return int(np.argmin(diffs))
 
