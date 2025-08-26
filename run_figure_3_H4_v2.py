@@ -25,7 +25,7 @@ def ensure_dir(directory):
     Path(directory).mkdir(parents=True, exist_ok=True)
 
 def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=True):
-    # Handle 2e integral shapes (2D compressed vs 4D)
+    # CASCI may provide g2 in reduced form, so handle different g2 formats
     if hasattr(g2, 'shape'):
         if g2.ndim == 4:
             g_phys = g2.transpose((0, 2, 3, 1))
@@ -40,7 +40,7 @@ def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=T
     int1_spin = add_spin_1bd(h1)
     int2_spin = add_spin_2bd(g_phys)
 
-    # Fermionic -> Qubit Hamiltonian
+    # fermionic to qubit Hamiltonian
     intop = InteractionOperator(H_const, int1_spin, int2_spin)
     ferm_ham = get_fermion_operator(intop)
     qub_ham = jordan_wigner(ferm_ham)
@@ -79,8 +79,11 @@ def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=T
     cost = lambda p: pnp.real(circuit(p))
     n_params = n_sing + n_doub
 
-    # Initialize parameters
-    params = pnp.zeros(n_params, requires_grad=True) if init_params is None else pnp.array(init_params, requires_grad=True)
+    # initialise parameters
+    if init_params is None:
+        params = pnp.zeros(n_params, requires_grad=True)
+    else:
+        params = pnp.array(init_params, requires_grad=True)
 
     # Run VQE
     opt = qml.AdamOptimizer(0.05)
