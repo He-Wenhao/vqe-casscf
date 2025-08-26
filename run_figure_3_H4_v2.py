@@ -228,7 +228,6 @@ def embed_cas_ci_into_full(ci_cas, norb_full, nelec, act_idx):
     stra_cas = cistring.make_strings(range(ncas), na)
     strb_cas = cistring.make_strings(range(ncas), nb)
 
-    # quick lookup: full-bitstring -> index
     posA = {int(s): i for i, s in enumerate(stra_full)}
     posB = {int(s): i for i, s in enumerate(strb_full)}
 
@@ -283,12 +282,12 @@ def run_experiment(bond_length):
         bond_idx = get_bond_length_index(d, inference_data)
         proj = np.array(inference_data["proj"][bond_idx])
         print(f"Using projection matrix at index {bond_idx} for bond length {d}")
-        # Apply permutation
+
         S = mol.intor("int1e_ovlp")
         sqrtS = scipy.linalg.sqrtm(S).real
         perm = perm_orca2pyscf(atom=atom, basis="cc-pVDZ")
         proj = perm @ proj @ perm.T
-        # Get NN orbitals
+
         eigvals, eigvecs = eigh(proj)
         idx = np.argsort(eigvals)[::-1]
         sqrtS_inv = inv(sqrtS)
@@ -361,7 +360,7 @@ def run_experiment(bond_length):
         hf_temp = create_temp_mc(mc_hf_casci, hf_ci_history[i])
         nn_temp = create_temp_mc(mc_nn_casci, nn_ci_history[i])
 
-        # Infidelity vs FCI-CASSCF reference (as before)
+        # Infidelity vs FCI-CASSCF reference
         infid_hf = casscf_overlap(hf_temp, mc_fci_casscf)
         infid_nn = casscf_overlap(nn_temp, mc_fci_casscf)
 
@@ -375,7 +374,7 @@ def run_experiment(bond_length):
         infidelities_nn_full.append(float(1.0 - F_nn_global_i))
         steps.append(i * 10)
     
-    # Final infidelities vs FULL FCI (EMBEDDING)
+    # Final infidelities vs FULL FCI
     final_infid_hf_full = float(1.0 - cas_fullspace_fidelity(hf_ci_casci, ci_full_hf, norb_hf, nelec_hf, act_idx_hf))
     final_infid_nn_full = float(1.0 - cas_fullspace_fidelity(nn_ci_casci, ci_full_nn, norb_nn, nelec_nn, act_idx_nn))
 
@@ -411,7 +410,7 @@ def run_experiment(bond_length):
             "hf": float(final_infid_hf),
             "nn": float(final_infid_nn)
         },
-        # Full-space (embedding) infidelities vs cc-pVDZ FCI
+        # Full-space infidelities vs cc-pVDZ FCI
         "final_infidelities_full_fci": {
             "hf": float(final_infid_hf_full),
             "nn": float(final_infid_nn_full)
@@ -427,7 +426,7 @@ def run_experiment(bond_length):
             "steps": steps,
             "hf": infidelities_hf_full,
             "nn": infidelities_nn_full,
-            "casscf_nn": casscf_grey_line  # <-- NEW: flat grey line
+            "casscf_nn": casscf_grey_line
         },
         "energy_history": {
             "all_steps": list(range(len(mc_hf_casci.fcisolver.energy_history))),
