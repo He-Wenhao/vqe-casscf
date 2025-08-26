@@ -57,7 +57,7 @@ def pennylane_vqe(H_const, h1, g2, nele, init_params=None):
     cost = lambda p: pnp.real(circuit(p))
     n_params = n_sing + n_doub
 
-    # initialise parameters
+    # initialize parameters
     if init_params is None:
         params = pnp.zeros(n_params, requires_grad=True)
     else:
