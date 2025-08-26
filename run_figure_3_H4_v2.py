@@ -40,7 +40,7 @@ def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=T
     int1_spin = add_spin_1bd(h1)
     int2_spin = add_spin_2bd(g_phys)
 
-    # fermionic to qubit Hamiltonian
+    # Fermionic to qubit Hamiltonian
     intop = InteractionOperator(H_const, int1_spin, int2_spin)
     ferm_ham = get_fermion_operator(intop)
     qub_ham = jordan_wigner(ferm_ham)
@@ -79,7 +79,7 @@ def pennylane_vqe_casci(H_const, h1, g2, nele, init_params=None, track_history=T
     cost = lambda p: pnp.real(circuit(p))
     n_params = n_sing + n_doub
 
-    # initialise parameters
+    # Initialize parameters
     if init_params is None:
         params = pnp.zeros(n_params, requires_grad=True)
     else:
