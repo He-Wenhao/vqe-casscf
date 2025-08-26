@@ -23,12 +23,14 @@ def ensure_dir(path: Path):
     path.mkdir(parents=True, exist_ok=True)
 
 def _get_bond_length_index(bond_length, inference_data):
-    # exact match first
+    # exact match
     for idx, pos_set in enumerate(inference_data["pos"]):
         first_bond = pos_set[1][0] - pos_set[0][0]
         if abs(first_bond - bond_length) < 1e-6:
             return idx
-    # closest
+            
+    # closest match if fails (this should never happen)
+    print(f"Warning: Using closest bond length match at index {bond_idx}")
     diffs = [abs(ps[1][0] - ps[0][0] - bond_length) for ps in inference_data["pos"]]
     return int(np.argmin(diffs))
 
