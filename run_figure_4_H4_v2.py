@@ -8,7 +8,7 @@ import os
 from vqe_driver import PennyLaneSolver, perm_orca2pyscf
 
 FILE = "data_H4/inference.json"
-log_path_beginning = f"results/fig4/cas_init_result_exp(2-step)/"
+log_path_beginning = f"results/fig4/cas_init_result(2-step)/"
 # log_path_beginning = f"results/fig4/cas_init_result(1-step)/"
 
 # Load data once globally
