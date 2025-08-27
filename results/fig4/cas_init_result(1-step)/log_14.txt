@@ -1,0 +1,163 @@
+14.json
+[['H', (0.0, 0.0, 0.0)], ['H', (1.7000000476837158, 0.0, 0.0)], ['H', (3.4000000953674316, 0.0, 0.0)], ['H', (5.099999904632568, 0.0, 0.0)]]
+overwrite output file: results/fig4/cas_init_result(1-step)/log_14.txt
+
+Running CASSCF with NN initial guess...  [two_step=False, max_cycle_micro=0]
+  PL-VQE iter   0 → E = -1.92247289 Ha
+  PL-VQE iter  50 → E = -2.06911523 Ha
+  PL-VQE iter 100 → E = -2.06963837 Ha
+  PL-VQE iter 150 → E = -2.06964068 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06964067 Ha
+  VQE energy: -2.06964067 Ha
+energy difference: 0.00000000 Ha
+  PL-VQE iter   0 → E = -2.06990375 Ha
+  PL-VQE iter  50 → E = -2.06990605 Ha
+  PL-VQE iter 100 → E = -2.06990829 Ha
+  PL-VQE iter 150 → E = -2.06990837 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06990837 Ha
+  VQE energy: -2.06990837 Ha
+energy difference: 0.00000000 Ha
+macro iter  1  CASSCF E = -2.06990836943987
+  PL-VQE iter   0 → E = -2.06990916 Ha
+  PL-VQE iter  50 → E = -2.06989085 Ha
+  PL-VQE iter 100 → E = -2.06990903 Ha
+  PL-VQE iter 150 → E = -2.06990921 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06990893 Ha
+  VQE energy: -2.06990893 Ha
+energy difference: 0.00000000 Ha
+macro iter  2  CASSCF E = -2.06990892751366
+  PL-VQE iter   0 → E = -2.06990895 Ha
+  PL-VQE iter  50 → E = -2.06990170 Ha
+  PL-VQE iter 100 → E = -2.06990904 Ha
+  PL-VQE iter 150 → E = -2.06990920 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06990920 Ha
+  VQE energy: -2.06990920 Ha
+energy difference: 0.00000000 Ha
+macro iter  3  CASSCF E = -2.06990920250344
+  PL-VQE iter   0 → E = -2.06990922 Ha
+  PL-VQE iter  50 → E = -2.06989752 Ha
+  PL-VQE iter 100 → E = -2.06990903 Ha
+  PL-VQE iter 150 → E = -2.06990922 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06990922 Ha
+  VQE energy: -2.06990922 Ha
+energy difference: 0.00000000 Ha
+macro iter  4  CASSCF E = -2.06990922280179
+CASSCF converged in 4 macro (12 JK 4 micro)
+CASSCF energy = -2.06990922280179
+CASSCF (NN guess) took 69.40 seconds
+VQE calls: 5
+
+Running CASSCF with HF initial guess...  [two_step=False, max_cycle_micro=0]
+  PL-VQE iter   0 → E = -1.93735163 Ha
+  PL-VQE iter  50 → E = -2.03623235 Ha
+  PL-VQE iter 100 → E = -2.03646707 Ha
+  PL-VQE iter 150 → E = -2.03646814 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.03646814 Ha
+  VQE energy: -2.03646814 Ha
+energy difference: 0.00000000 Ha
+  PL-VQE iter   0 → E = -2.05521212 Ha
+  PL-VQE iter  50 → E = -2.05608356 Ha
+  PL-VQE iter 100 → E = -2.05608915 Ha
+  PL-VQE iter 150 → E = -2.05608919 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.05608919 Ha
+  VQE energy: -2.05608919 Ha
+energy difference: 0.00000000 Ha
+macro iter  1  CASSCF E = -2.05608918965641
+  PL-VQE iter   0 → E = -2.06732233 Ha
+  PL-VQE iter  50 → E = -2.06748219 Ha
+  PL-VQE iter 100 → E = -2.06748319 Ha
+  PL-VQE iter 150 → E = -2.06748326 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06748326 Ha
+  VQE energy: -2.06748326 Ha
+energy difference: 0.00000000 Ha
+macro iter  2  CASSCF E = -2.06748326296001
+  PL-VQE iter   0 → E = -2.06937881 Ha
+  PL-VQE iter  50 → E = -2.06939065 Ha
+  PL-VQE iter 100 → E = -2.06939199 Ha
+  PL-VQE iter 150 → E = -2.06939200 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06939200 Ha
+  VQE energy: -2.06939200 Ha
+energy difference: 0.00000000 Ha
+macro iter  3  CASSCF E = -2.06939199557260
+  PL-VQE iter   0 → E = -2.06943407 Ha
+  PL-VQE iter  50 → E = -2.06943003 Ha
+  PL-VQE iter 100 → E = -2.06943549 Ha
+  PL-VQE iter 150 → E = -2.06943565 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06943565 Ha
+  VQE energy: -2.06943565 Ha
+energy difference: 0.00000000 Ha
+macro iter  4  CASSCF E = -2.06943565417209
+  PL-VQE iter   0 → E = -2.06943591 Ha
+  PL-VQE iter  50 → E = -2.06942507 Ha
+  PL-VQE iter 100 → E = -2.06943584 Ha
+  PL-VQE iter 150 → E = -2.06943595 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06943593 Ha
+  VQE energy: -2.06943593 Ha
+energy difference: 0.00000000 Ha
+macro iter  5  CASSCF E = -2.06943593290842
+  PL-VQE iter   0 → E = -2.06943594 Ha
+  PL-VQE iter  50 → E = -2.06942353 Ha
+  PL-VQE iter 100 → E = -2.06943590 Ha
+  PL-VQE iter 150 → E = -2.06943596 Ha
+data type of ci_vec: float64
+  FCI energy from CI vector: -2.06943596 Ha
+  VQE energy: -2.06943596 Ha
+energy difference: 0.00000000 Ha
+macro iter  6  CASSCF E = -2.06943595719489
+CASSCF converged in 6 macro (25 JK 6 micro)
+CASSCF energy = -2.06943595719489
+CASSCF (HF guess) took 93.91 seconds
+VQE calls: 7
+ |ddm|= 1.21e-05
+  HOMO = -0.379664628945463  LUMO = -0.0535867944901121
+Extra cycle  E= -1.93735162652763  delta_E= -9.19e-14  |g|= 1.02e-07  |ddm|= 6.12e-07
+converged SCF energy = -1.93735162652763
+
+
+******** <class 'pyscf.scf.hf.RHF'> ********
+method = RHF
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-09
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmphho5vs6h
+max_memory 4000 MB (current use 0 MB)
+Set gradient conv threshold to 3.16228e-05
+Initial guess from minao.
+init E= -1.36579050162642
+  HOMO = -0.248456809699099  LUMO = -0.108520147430426
+cycle= 1 E= -1.9312867826235  delta_E= -0.565  |g|= 0.0713  |ddm|= 1.04
+  HOMO = -0.373372078234042  LUMO = -0.0644985902908905
+cycle= 2 E= -1.93628199181522  delta_E= -0.005  |g|= 0.0241  |ddm|= 0.152
+  HOMO = -0.377457068796473  LUMO = -0.0555933058731093
+cycle= 3 E= -1.93726311317587  delta_E= -0.000981  |g|= 0.0071  |ddm|= 0.0747
+  HOMO = -0.379586748413784  LUMO = -0.0541371683138174
+cycle= 4 E= -1.93734916016415  delta_E= -8.6e-05  |g|= 0.00134  |ddm|= 0.0256
+  HOMO = -0.379634990207891  LUMO = -0.0535772173521567
+cycle= 5 E= -1.93735162172842  delta_E= -2.46e-06  |g|= 8.9e-05  |ddm|= 0.00362
+  HOMO = -0.379666630302221  LUMO = -0.053586945275164
+cycle= 6 E= -1.93735162650977  delta_E= -4.78e-09  |g|= 6.01e-06  |ddm|= 0.000205
+  HOMO = -0.379664247937601  LUMO = -0.0535866214183078
+cycle= 7 E= -1.93735162652754  delta_E= -1.78e-11  |g|= 3.23e-07  |ddm|= 1.21e-05
+  HOMO = -0.379664628945463  LUMO = -0.0535867944901119
+Extra cycle  E= -1.93735162652763  delta_E= -9.24e-14  |g|= 1.02e-07  |ddm|= 6.12e-07
+converged SCF energy = -1.93735162652763
