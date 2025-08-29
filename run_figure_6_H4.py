@@ -25,7 +25,7 @@ def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     # Classical CASSCF (no VQE)
     mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
     mc.mo_coeff = mo_guess
-    mc.verbose = 4  # detailed logging
+    mc.verbose = 4
 
     start = time.time()
     mc.kernel()
