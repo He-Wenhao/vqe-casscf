@@ -41,7 +41,7 @@ def load_projection_data(filename=FILE, atom=None, bond_length=BOND_LENGTH):
             break
     
     if bond_idx is None:
-        # Find closest match
+        # Find closest match (this should never happen)
         min_diff = float('inf')
         for idx, pos_set in enumerate(positions):
             first_bond = pos_set[1][0] - pos_set[0][0]
@@ -54,7 +54,7 @@ def load_projection_data(filename=FILE, atom=None, bond_length=BOND_LENGTH):
     # Get the projection matrix for this bond length
     proj = np.array(inference_data["proj"][bond_idx])
 
-    # Overlap and permutation (rest stays the same)
+    # Overlap and permutation
     S = gto.M(atom=atom, basis="cc-pVDZ").intor("int1e_ovlp")
     sqrtS = scipy.linalg.sqrtm(S).real
     perm = perm_orca2pyscf(atom=atom, basis="cc-pVDZ")
@@ -188,10 +188,8 @@ def main():
     print(f"Running VQE scan experiment for bond length {bond_length}")
     print(f"{'='*60}\n")
     
-    # Run experiment
     results = run_experiment(bond_length)
     
-    # Save results
     filename = f"{results_dir}/vqe_scan({bond_length}).json"
     with open(filename, 'w') as f:
         json.dump(results, f, indent=2)
@@ -200,7 +198,6 @@ def main():
     print(f"Results saved to {filename}")
     print(f"{'='*60}")
     
-    # Print summary
     energies = np.array(results['energy'])
     ts = np.array(results['t'])
     idx_min = np.argmin(energies)
