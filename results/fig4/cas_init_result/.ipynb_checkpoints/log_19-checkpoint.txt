@@ -139,7 +139,7 @@ energy difference: 0.00000000 Ha
 macro iter  6  CASSCF E = -2.01678134813408
 CASSCF converged in 6 macro (21 JK 9 micro)
 CASSCF energy = -2.01678134813408
-CASSCF (NN guess) took 120.92 seconds
+CASSCF (NN guess) took 126.29 seconds
 VQE calls: 15 = 6 macro + 9 micro
 
 Running CASSCF with HF initial guess...
@@ -186,7 +186,7 @@ data type of ci_vec: float64
   FCI energy from CI vector: -2.01416004 Ha
   VQE energy: -2.01416004 Ha
 energy difference: 0.00000000 Ha
-macro iter  1  CASSCF E = -2.01416004075263
+macro iter  1  CASSCF E = -2.01416004075262
   PL-VQE iter   0 → E = -2.01416416 Ha
   PL-VQE iter  50 → E = -2.01415677 Ha
   PL-VQE iter 100 → E = -2.01416427 Ha
@@ -195,7 +195,7 @@ data type of ci_vec: float64
   FCI energy from CI vector: -2.01416438 Ha
   VQE energy: -2.01416438 Ha
 energy difference: 0.00000000 Ha
-macro iter  2  CASSCF E = -2.01416004075263
+macro iter  2  CASSCF E = -2.01416004075262
   PL-VQE iter   0 → E = -2.01416438 Ha
   PL-VQE iter  50 → E = -2.01415736 Ha
   PL-VQE iter 100 → E = -2.01416435 Ha
@@ -225,10 +225,10 @@ energy difference: 0.00000000 Ha
 macro iter  3  CASSCF E = -2.01416441601352
 CASSCF converged in 3 macro (20 JK 6 micro)
 CASSCF energy = -2.01416441601352
-CASSCF (HF guess) took 68.78 seconds
+CASSCF (HF guess) took 70.40 seconds
 VQE calls: 9 = 3 macro + 6 micro
-58  LUMO = -0.0974042861524434
-Extra cycle  E= -1.79766742244455  delta_E= -2e-13  |g|= 1.27e-07  |ddm|= 1.09e-06
+09358  LUMO = -0.0974042861524436
+Extra cycle  E= -1.79766742244455  delta_E= -1.99e-13  |g|= 1.27e-07  |ddm|= 1.09e-06
 converged SCF energy = -1.79766742244455
 
 ******** <class 'pyscf.mcscf.mc1step.CASSCF'> ********
@@ -255,7 +255,7 @@ natorb = False
 canonicalization = True
 sorting_mo_energy = False
 ao2mo_level = 2
-chkfile = /tmp/tmp0ofzzybx
+chkfile = /tmp/tmph9n_63lc
 max_memory 4000 MB (current use 255 MB)
 internal_rotation = False
 CASCI E = -2.01660953351043
@@ -293,26 +293,26 @@ SCF conv_tol_grad = None
 SCF max_cycles = 50
 direct_scf = True
 direct_scf_tol = 1e-13
-chkfile to save SCF result = /tmp/tmpk8cky95y
-max_memory 4000 MB (current use 276 MB)
+chkfile to save SCF result = /tmp/tmpbuo1hy37
+max_memory 4000 MB (current use 277 MB)
 Set gradient conv threshold to 3.16228e-05
 Initial guess from minao.
 init E= -1.3189934190773
   HOMO = -0.217867861046262  LUMO = -0.145177554726186
 cycle= 1 E= -1.79083979419536  delta_E= -0.472  |g|= 0.0642  |ddm|= 1.14
   HOMO = -0.337552461785868  LUMO = -0.106632886901572
-cycle= 2 E= -1.79612378605156  delta_E= -0.00528  |g|= 0.0231  |ddm|= 0.143
-  HOMO = -0.344958179982513  LUMO = -0.100700201723502
+cycle= 2 E= -1.79612378605155  delta_E= -0.00528  |g|= 0.0231  |ddm|= 0.143
+  HOMO = -0.344958179982513  LUMO = -0.100700201723503
 cycle= 3 E= -1.79746960580654  delta_E= -0.00135  |g|= 0.00837  |ddm|= 0.0839
   HOMO = -0.347554555910208  LUMO = -0.0982082002815323
 cycle= 4 E= -1.79765691415395  delta_E= -0.000187  |g|= 0.00267  |ddm|= 0.0393
-  HOMO = -0.347720910440988  LUMO = -0.0974038947493533
+  HOMO = -0.347720910440988  LUMO = -0.097403894749353
 cycle= 5 E= -1.79766739086682  delta_E= -1.05e-05  |g|= 0.000197  |ddm|= 0.00768
-  HOMO = -0.347745005160477  LUMO = -0.0974080511230145
+  HOMO = -0.347745005160477  LUMO = -0.0974080511230146
 cycle= 6 E= -1.79766742237033  delta_E= -3.15e-08  |g|= 1.13e-05  |ddm|= 0.00045
-  HOMO = -0.347745896061525  LUMO = -0.0974035497248554
+  HOMO = -0.347745896061525  LUMO = -0.0974035497248513
 cycle= 7 E= -1.79766742244435  delta_E= -7.4e-11  |g|= 5.89e-07  |ddm|= 1.71e-05
-  HOMO = -0.34774598809358  LUMO = -0.0974042861524432
+  HOMO = -0.34774598809358  LUMO = -0.097404286152443
 Extra cycle  E= -1.79766742244455  delta_E= -1.99e-13  |g|= 1.27e-07  |ddm|= 1.09e-06
 converged SCF energy = -1.79766742244455
 
@@ -340,19 +340,19 @@ natorb = False
 canonicalization = True
 sorting_mo_energy = False
 ao2mo_level = 2
-chkfile = /tmp/tmpk8cky95y
-max_memory 4000 MB (current use 276 MB)
+chkfile = /tmp/tmpbuo1hy37
+max_memory 4000 MB (current use 277 MB)
 internal_rotation = False
 CASCI E = -1.97891424312870
 Set conv_tol_grad to 0.000316228
-macro iter   1 ( 14 JK    4 micro), CASSCF E = -2.01416004075263  dE = -3.52457976e-02
+macro iter   1 ( 14 JK    4 micro), CASSCF E = -2.01416004075262  dE = -3.52457976e-02
                |grad[o]|=0.148  |ddm|=0.108  |maxRot[o]|=0.149
 macro iter   2 (  3 JK    1 micro), CASSCF E = -2.01416438283094  dE = -4.34207831e-06
                |grad[o]|=0.00236  |ddm|=0.00188  |maxRot[o]|=0.000843
-macro iter   3 (  3 JK    1 micro), CASSCF E = -2.01416441601352  dE = -3.31825794e-08
+macro iter   3 (  3 JK    1 micro), CASSCF E = -2.01416441601352  dE = -3.31825816e-08
                |grad[o]|=0.000185  |ddm|=0.000245  |maxRot[o]|=8.52e-05
 1-step CASSCF converged in   3 macro ( 20 JK   6 micro) steps
 CASSCF canonicalization
 Density matrix diagonal elements [1.52515471 1.34756085 0.655955   0.47132944]
 CASSCF energy = -2.01416441601352
-CASCI E = -2.01416441601352  E(CI) = -3.05648317768417
+CASCI E = -2.01416441601352  E(CI) = -3.05648317768416

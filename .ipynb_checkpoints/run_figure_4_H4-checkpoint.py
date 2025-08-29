@@ -24,7 +24,7 @@ def run_casscf_with_guess(mol, mo_guess, ncas, nelecas, label=""):
     mc = mcscf.CASSCF(mf_init, ncas=ncas, nelecas=nelecas)
     mc.fcisolver = PennyLaneSolver(mf_init)
     mc.mo_coeff = mo_guess
-    mc.verbose = 0  # suppress PySCF banner so we control output
+    mc.verbose = 4  # suppress PySCF banner so we control output
     
     # Count VQE calls directly
     vqe_call_count = {"count": 0}
@@ -84,7 +84,8 @@ def process_index(ind):
     name = name_l[ind]
 
     atom = [[ele, tuple(coord)] for ele, coord in zip(elements, pos)]
-
+    print(ind,name)
+    #return 0
     log_path = f"results/fig4/cas_init_result/log_{name[:-5]}.txt"
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     sys.stdout = open(log_path, "w")
@@ -119,7 +120,7 @@ def process_index(ind):
     sys.stdout = sys.__stdout__
 
 if __name__ == "__main__":
-    for i in range(0,23):
+    for i in range(1,2):
         process_index(i)
 
     print("Files saved to results/fig4/cas_init_result/")
