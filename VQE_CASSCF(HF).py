@@ -22,14 +22,11 @@ def ensure_dir(path: Path):
     path.mkdir(parents=True, exist_ok=True)
 
 def run_vqe_casscf_hf_for_bond(bond_length: float):
-    # Build molecule at distance d (Å)
     mol, _ = setup_molecule(d=bond_length)
 
-    # HF to get initial MO guess
     mf = scf.RHF(mol); mf.kernel()
     hf_mo = mf.mo_coeff
 
-    # VQE-CASSCF using HF MOs as initial guess
     e_tot, params, mo_coeff, ci_vec, mc = run_cas(mol, hf_mo, NCAS, NELECAS, solver='VQE')
     return float(e_tot)
 

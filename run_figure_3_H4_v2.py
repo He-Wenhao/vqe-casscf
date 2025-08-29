@@ -204,7 +204,7 @@ def get_bond_length_index(bond_length, inference_data):
     print(f"Warning: Using closest bond length match at index {best_idx}")
     return best_idx
 
-# === Full-FCI utilities (for fidelity against full cc-pVDZ FCI) ===
+# === Full-FCI utilities (for fidelity against full Hilbert space cc-pVDZ FCI) ===
 
 def full_fci_in_basis(mol, mo_full):
     """Full-space FCI in provided MO basis. Returns TOTAL energy (incl. E_nuc)."""
@@ -331,7 +331,6 @@ def run_experiment(bond_length):
     )
     print(f"NN-VQE-CASCI final energy: {E_nn_casci:.8f} Ha")
     
-    # Helper to wrap history entries (for casscf_overlap)
     def create_temp_mc(base_mc, ci_vec):
         temp_mc = type('TempMC', (), {})()
         temp_mc.ci = np.array(ci_vec) if isinstance(ci_vec, list) else ci_vec
@@ -354,7 +353,7 @@ def run_experiment(bond_length):
     
     n_steps = min(len(hf_ci_history), len(nn_ci_history))
 
-    # Full-FCI references (TOTAL energies). We'll use EMBEDDING for fidelity.
+    # Full Hilbert Space FCI references (total energies). EMBEDDING is used for fidelity.
     e_full_hf, ci_full_hf, norb_hf, nelec_hf = full_fci_in_basis(mol, hf_mo_casci)
     e_full_nn, ci_full_nn, norb_nn, nelec_nn = full_fci_in_basis(mol, nn_mo_casci)
 
@@ -369,7 +368,7 @@ def run_experiment(bond_length):
         infid_hf = casscf_overlap(hf_temp, mc_fci_casscf)
         infid_nn = casscf_overlap(nn_temp, mc_fci_casscf)
 
-        # --- EMBEDDING: true full-space fidelity vs cc-pVDZ FCI ---
+        # Full Hilbert space fidelity
         F_hf_global_i = cas_fullspace_fidelity(hf_ci_history[i], ci_full_hf, norb_hf, nelec_hf, act_idx_hf)
         F_nn_global_i = cas_fullspace_fidelity(nn_ci_history[i], ci_full_nn, norb_nn, nelec_nn, act_idx_nn)
 
@@ -379,7 +378,7 @@ def run_experiment(bond_length):
         infidelities_nn_full.append(float(1.0 - F_nn_global_i))
         steps.append(i * 10)
     
-    # Final infidelities vs FULL FCI
+    # Final infidelities vs Full Hilbert Space FCI
     final_infid_hf_full = float(1.0 - cas_fullspace_fidelity(hf_ci_casci, ci_full_hf, norb_hf, nelec_hf, act_idx_hf))
     final_infid_nn_full = float(1.0 - cas_fullspace_fidelity(nn_ci_casci, ci_full_nn, norb_nn, nelec_nn, act_idx_nn))
 
@@ -392,8 +391,7 @@ def run_experiment(bond_length):
     )
     e_full_cass_nn, ci_full_cass_nn, norb_cass_nn, nelec_cass_nn = full_fci_in_basis(mol, mo_casscf_nn)
     act_idx_cass_nn = list(range(mc_casscf_nn.ncore, mc_casscf_nn.ncore + mc_casscf_nn.ncas))
-    F_casscf_nn_global = cas_fullspace_fidelity(ci_casscf_nn, ci_full_cass_nn,
-                                                norb_cass_nn, nelec_cass_nn, act_idx_cass_nn)
+    F_casscf_nn_global = cas_fullspace_fidelity(ci_casscf_nn, ci_full_cass_nn, norb_cass_nn, nelec_cass_nn, act_idx_cass_nn)
     final_infid_casscf_nn_full = float(1.0 - F_casscf_nn_global)
     casscf_grey_line = [final_infid_casscf_nn_full] * len(steps)
     
@@ -415,7 +413,6 @@ def run_experiment(bond_length):
             "hf": float(final_infid_hf),
             "nn": float(final_infid_nn)
         },
-        # Full-space infidelities vs cc-pVDZ FCI
         "final_infidelities_full_fci": {
             "hf": float(final_infid_hf_full),
             "nn": float(final_infid_nn_full)
@@ -438,7 +435,6 @@ def run_experiment(bond_length):
             "hf": mc_hf_casci.fcisolver.energy_history,
             "nn": mc_nn_casci.fcisolver.energy_history
         },
-        # Self-identify overlap mode and include VQE-CASSCF (NN init) summary
         "full_fci_overlap_mode": "embedded",
         "vqe_casscf_nn": {
             "energy": float(E_casscf_nn),
