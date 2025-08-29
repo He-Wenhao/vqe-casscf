@@ -54,13 +54,8 @@ def _load_nn_mos(atom, bond_length):
     return nn_mos
 
 def run_vqe_casscf_nn_for_bond(bond_length: float):
-    # Build molecule at distance d (Å)
     mol, atom = setup_molecule(d=bond_length)
-
-    # NN initial guess from inference.json projection
     nn_mo = _load_nn_mos(atom, bond_length)
-
-    # VQE-CASSCF using NN MOs as initial guess
     e_tot, params, mo_coeff, ci_vec, mc = run_cas(mol, nn_mo, NCAS, NELECAS, solver='VQE')
     return float(e_tot)
 
