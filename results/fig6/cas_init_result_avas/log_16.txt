@@ -1,0 +1,271 @@
+16.json
+[['H', (0.0, 0.0, 0.0)], ['H', (1.899999976158142, 0.0, 0.0)], ['H', (3.799999952316284, 0.0, 0.0)], ['H', (5.699999809265137, 0.0, 0.0)]]
+overwrite output file: results/fig6/cas_init_result_avas/log_16.txt
+
+Running CASSCF with NN initial guess...
+CASSCF (NN guess) took 0.06 seconds
+[AVAS] returning mo_guess with shape (20, 20), ncas=4, nelecas=4
+
+Running CASSCF with AVAS(H 1s, 0.95) initial guess...
+CASSCF (AVAS(H 1s, 0.95) guess) took 0.09 seconds
+[AVAS] (suggested) ncas=4, nelecas=4
+file None
+[INPUT] verbose = 4
+[INPUT] num. atoms = 4
+[INPUT] num. electrons = 4
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 H      0.000000000000   0.000000000000   0.000000000000 AA    0.000000000000   0.000000000000   0.000000000000 Bohr   0.0
+[INPUT]  2 H      1.899999976158   0.000000000000   0.000000000000 AA    3.590479591619   0.000000000000   0.000000000000 Bohr   0.0
+[INPUT]  3 H      3.799999952316   0.000000000000   0.000000000000 AA    7.180959183238   0.000000000000   0.000000000000 Bohr   0.0
+[INPUT]  4 H      5.699999809265   0.000000000000   0.000000000000 AA   10.771438549584   0.000000000000   0.000000000000 Bohr   0.0
+
+nuclear repulsion = 1.20689543225556
+number of shells = 12
+number of NR pGTOs = 28
+number of NR cGTOs = 20
+basis = ccpVDZ
+ecp = {}
+CPU time:        10.93
+
+
+******** <class 'pyscf.scf.hf.RHF'> ********
+method = RHF
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-09
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmpeqo_z923
+max_memory 4000 MB (current use 0 MB)
+Set gradient conv threshold to 3.16228e-05
+Initial guess from minao.
+init E= -1.339653990641
+  HOMO = -0.234083333666154  LUMO = -0.126510127733857
+cycle= 1 E= -1.86976891208016  delta_E= -0.53  |g|= 0.0682  |ddm|= 1.08
+  HOMO = -0.357721841857781  LUMO = -0.0847339392168136
+cycle= 2 E= -1.87489134227483  delta_E= -0.00512  |g|= 0.0238  |ddm|= 0.144
+  HOMO = -0.36346753622566  LUMO = -0.0772570438984567
+cycle= 3 E= -1.87602216173248  delta_E= -0.00113  |g|= 0.00765  |ddm|= 0.0771
+  HOMO = -0.365756981402261  LUMO = -0.0754095016479033
+cycle= 4 E= -1.87614272024641  delta_E= -0.000121  |g|= 0.00179  |ddm|= 0.0299
+  HOMO = -0.365842479552487  LUMO = -0.0747125893862557
+cycle= 5 E= -1.87614750276593  delta_E= -4.78e-06  |g|= 0.00013  |ddm|= 0.00511
+  HOMO = -0.365874466417879  LUMO = -0.0747188962237888
+cycle= 6 E= -1.87614751406072  delta_E= -1.13e-08  |g|= 7.47e-06  |ddm|= 0.000278
+  HOMO = -0.365872583284135  LUMO = -0.074717340858895
+cycle= 7 E= -1.87614751408992  delta_E= -2.92e-11  |g|= 4.14e-07  |ddm|= 1.26e-05
+  HOMO = -0.365872915044849  LUMO = -0.0747177052111732
+Extra cycle  E= -1.87614751409003  delta_E= -1.09e-13  |g|= 1.06e-07  |ddm|= 7.62e-07
+converged SCF energy = -1.87614751409003
+
+******** <class 'pyscf.mcscf.mc1step.CASSCF'> ********
+CAS (2e+2e, 4o), ncore = 0, nvir = 16
+max_cycle_macro = 50
+max_cycle_micro = 4
+conv_tol = 1e-07
+conv_tol_grad = None
+orbital rotation max_stepsize = 0.02
+orbital rotation threshold for CI restart = 0.01
+augmented hessian ah_max_cycle = 30
+augmented hessian ah_conv_tol = 1e-12
+augmented hessian ah_linear dependence = 1e-14
+augmented hessian ah_level shift = 1e-08
+augmented hessian ah_start_tol = 2.5
+augmented hessian ah_start_cycle = 3
+augmented hessian ah_grad_trust_region = 3
+kf_trust_region = 3
+kf_interval = 4
+ci_response_space = 4
+ci_grad_trust_region = 3
+with_dep4 0
+natorb = False
+canonicalization = True
+sorting_mo_energy = False
+ao2mo_level = 2
+chkfile = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmpeqo_z923
+max_memory 4000 MB (current use 0 MB)
+internal_rotation = False
+******** <class 'pyscf.fci.direct_spin1.FCISolver'> ********
+max. cycles = 50
+conv_tol = 1e-08
+davidson only = False
+linear dependence = 1e-12
+level shift = 0.001
+max iter space = 12
+max_memory 4000 MB
+nroots = 1
+pspace_size = 400
+spin = None
+CASCI E = -2.04241129082326  S^2 = 0.0000000
+Set conv_tol_grad to 0.000316228
+macro iter   1 (  9 JK    3 micro), CASSCF E = -2.04259675499283  dE = -1.85464170e-04  S^2 = 0.0000000
+               |grad[o]|=0.0182  |grad[c]|=0.000193  |ddm|=0.00592  |maxRot[o]|=0.0063
+macro iter   2 (  3 JK    1 micro), CASSCF E = -2.04259675808359  dE = -3.09076231e-09  S^2 = 0.0000000
+               |grad[o]|=3.8e-05  |grad[c]|=2e-05  |ddm|=9.12e-05  |maxRot[o]|=2.45e-05
+1-step CASSCF converged in   2 macro ( 12 JK   4 micro) steps
+CASSCF canonicalization
+Density matrix diagonal elements [1.67035017 1.49390411 0.50710949 0.32863623]
+CASSCF energy = -2.04259675808359
+CASCI E = -2.04259675808359  E(CI) = -3.24949219033915  S^2 = 0.0000000
+
+
+******** <class 'pyscf.scf.hf.RHF'> ********
+method = RHF
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-09
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmp24b_mg4c
+max_memory 4000 MB (current use 0 MB)
+Set gradient conv threshold to 3.16228e-05
+Initial guess from minao.
+init E= -1.339653990641
+  HOMO = -0.234083333666154  LUMO = -0.126510127733857
+cycle= 1 E= -1.86976891208016  delta_E= -0.53  |g|= 0.0682  |ddm|= 1.08
+  HOMO = -0.35772184185778  LUMO = -0.0847339392168128
+cycle= 2 E= -1.87489134227483  delta_E= -0.00512  |g|= 0.0238  |ddm|= 0.144
+  HOMO = -0.36346753622566  LUMO = -0.0772570438984566
+cycle= 3 E= -1.87602216173248  delta_E= -0.00113  |g|= 0.00765  |ddm|= 0.0771
+  HOMO = -0.365756981402262  LUMO = -0.0754095016479043
+cycle= 4 E= -1.87614272024641  delta_E= -0.000121  |g|= 0.00179  |ddm|= 0.0299
+  HOMO = -0.365842479552487  LUMO = -0.0747125893862561
+cycle= 5 E= -1.87614750276593  delta_E= -4.78e-06  |g|= 0.00013  |ddm|= 0.00511
+  HOMO = -0.365874466417879  LUMO = -0.0747188962237889
+cycle= 6 E= -1.87614751406072  delta_E= -1.13e-08  |g|= 7.47e-06  |ddm|= 0.000278
+  HOMO = -0.365872583284133  LUMO = -0.0747173408588939
+cycle= 7 E= -1.87614751408992  delta_E= -2.92e-11  |g|= 4.14e-07  |ddm|= 1.26e-05
+  HOMO = -0.365872915044848  LUMO = -0.0747177052111731
+Extra cycle  E= -1.87614751409003  delta_E= -1.11e-13  |g|= 1.06e-07  |ddm|= 7.62e-07
+converged SCF energy = -1.87614751409003
+
+******** AVAS flags ********
+aolabels = ['H 1s']
+ncore = 0
+minao = minao
+threshold = 0.95
+with_iao = False
+openshell_option = 2
+canonicalize = True
+
+** AVAS **
+  Total number of HF MOs  is equal to    20
+  Number of occupied HF MOs is equal to  2
+reference AO indices for minao ['H 1s']:
+ [0 1 2 3]
+Option 2: threshold 0.95
+Active from occupied = 2 , eig [0.9919292  0.99773605]
+Inactive from occupied = 0
+Active from unoccupied = 2 , eig [0.99986697 0.99988509]
+Inactive from unoccupied = 16
+Dimensions of active 4
+# of alpha electrons 2
+# of beta electrons 2
+
+
+******** <class 'pyscf.scf.hf.RHF'> ********
+method = RHF
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-09
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmp138kt32x
+max_memory 4000 MB (current use 0 MB)
+Set gradient conv threshold to 3.16228e-05
+Initial guess from minao.
+init E= -1.339653990641
+  HOMO = -0.234083333666154  LUMO = -0.126510127733857
+cycle= 1 E= -1.86976891208016  delta_E= -0.53  |g|= 0.0682  |ddm|= 1.08
+  HOMO = -0.35772184185778  LUMO = -0.0847339392168126
+cycle= 2 E= -1.87489134227483  delta_E= -0.00512  |g|= 0.0238  |ddm|= 0.144
+  HOMO = -0.363467536225661  LUMO = -0.0772570438984575
+cycle= 3 E= -1.87602216173248  delta_E= -0.00113  |g|= 0.00765  |ddm|= 0.0771
+  HOMO = -0.365756981402261  LUMO = -0.0754095016479028
+cycle= 4 E= -1.87614272024641  delta_E= -0.000121  |g|= 0.00179  |ddm|= 0.0299
+  HOMO = -0.365842479552487  LUMO = -0.0747125893862558
+cycle= 5 E= -1.87614750276593  delta_E= -4.78e-06  |g|= 0.00013  |ddm|= 0.00511
+  HOMO = -0.365874466417879  LUMO = -0.074718896223789
+cycle= 6 E= -1.87614751406072  delta_E= -1.13e-08  |g|= 7.47e-06  |ddm|= 0.000278
+  HOMO = -0.365872583284133  LUMO = -0.0747173408588947
+cycle= 7 E= -1.87614751408992  delta_E= -2.92e-11  |g|= 4.14e-07  |ddm|= 1.26e-05
+  HOMO = -0.365872915044849  LUMO = -0.0747177052111731
+Extra cycle  E= -1.87614751409004  delta_E= -1.12e-13  |g|= 1.06e-07  |ddm|= 7.62e-07
+converged SCF energy = -1.87614751409004
+
+******** <class 'pyscf.mcscf.mc1step.CASSCF'> ********
+CAS (2e+2e, 4o), ncore = 0, nvir = 16
+max_cycle_macro = 50
+max_cycle_micro = 4
+conv_tol = 1e-07
+conv_tol_grad = None
+orbital rotation max_stepsize = 0.02
+orbital rotation threshold for CI restart = 0.01
+augmented hessian ah_max_cycle = 30
+augmented hessian ah_conv_tol = 1e-12
+augmented hessian ah_linear dependence = 1e-14
+augmented hessian ah_level shift = 1e-08
+augmented hessian ah_start_tol = 2.5
+augmented hessian ah_start_cycle = 3
+augmented hessian ah_grad_trust_region = 3
+kf_trust_region = 3
+kf_interval = 4
+ci_response_space = 4
+ci_grad_trust_region = 3
+with_dep4 0
+natorb = False
+canonicalization = True
+sorting_mo_energy = False
+ao2mo_level = 2
+chkfile = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmp138kt32x
+max_memory 4000 MB (current use 0 MB)
+internal_rotation = False
+******** <class 'pyscf.fci.direct_spin1.FCISolver'> ********
+max. cycles = 50
+conv_tol = 1e-08
+davidson only = False
+linear dependence = 1e-12
+level shift = 0.001
+max iter space = 12
+max_memory 4000 MB
+nroots = 1
+pspace_size = 400
+spin = None
+CASCI E = -2.03127446026971  S^2 = 0.0000000
+Set conv_tol_grad to 0.000316228
+macro iter   1 ( 10 JK    4 micro), CASSCF E = -2.04259397168747  dE = -1.13195114e-02  S^2 = 0.0000000
+               |grad[o]|=0.127  |grad[c]|=0.0115  |ddm|=0.0743  |maxRot[o]|=0.054
+macro iter   2 (  3 JK    1 micro), CASSCF E = -2.04259671530360  dE = -2.74361613e-06  S^2 = 0.0000000
+               |grad[o]|=0.00189  |grad[c]|=0.000332  |ddm|=0.00153  |maxRot[o]|=0.000684
+macro iter   3 (  3 JK    1 micro), CASSCF E = -2.04259675236260  dE = -3.70590003e-08  S^2 = 0.0000000
+               |grad[o]|=0.000193  |grad[c]|=3.93e-05  |ddm|=0.000206  |maxRot[o]|=0.000104
+1-step CASSCF converged in   3 macro ( 16 JK   6 micro) steps
+CASSCF canonicalization
+Density matrix diagonal elements [1.67999425 1.51095776 0.49754453 0.31150347]
+CASSCF energy = -2.04259675236260
+CASCI E = -2.04259675236260  E(CI) = -3.24949218461815  S^2 = 0.0000000
