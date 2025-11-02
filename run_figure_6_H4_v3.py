@@ -51,7 +51,7 @@ def process_index(ind):
 
     atom = [[ele, tuple(coord)] for ele, coord in zip(elements, pos)]
 
-    log_path = f"results/fig6/cas_init_result/log_{name[:-5]}.txt"
+    log_path = f"results/fig6/cas_init_result_avas/log_{name[:-5]}.txt"
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     sys.stdout = open(log_path, "w")
 
@@ -71,15 +71,15 @@ def process_index(ind):
 
     # Build molecule
     mol = gto.M(atom=atom, basis='ccpVDZ', spin=0, charge=0, verbose=4, output=log_path)
+    
+    run_casscf_with_guess(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
 
     try:
         mo_avas, ncas_avas, nelecas_avas = avas_mo_guess_H4(mol, threshold=0.95)
-        run_casscf_with_guess(mol, mo_avas, ncas_avas,nelecas_avas, label="AVAS(H 1s, 0.95)")
+        run_casscf_with_guess(mol, mo_avas, ncas=4, nelecas=4, label="AVAS(H 1s, 0.95)")
         print(f"[AVAS] (suggested) ncas={ncas_avas}, nelecas={nelecas_avas}")
     except Exception as e:
         print(f"[AVAS] Failed to build guess: {e}")
-
-    run_casscf_with_guess(mol, rand_orbitals, ncas=4, nelecas=4, label="NN")
 
 
     sys.stdout.close()
@@ -89,4 +89,4 @@ if __name__ == "__main__":
     for i in range(0,23):
         process_index(i)
 
-    print("Files saved to results/fig6/cas_init_result/")
+    print("Files saved to results/fig6/cas_init_result_avas/")
