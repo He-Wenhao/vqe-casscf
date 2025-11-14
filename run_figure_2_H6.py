@@ -4,6 +4,7 @@ import os
 from tqdm import tqdm
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from pyscf.mcscf import avas
 import numpy as np
 from pyscf import gto, scf, mcscf, fci
 import scipy
@@ -19,9 +20,9 @@ from vqe_driver import perm_orca2pyscf
 mpl.rcParams['pdf.fonttype'] = 42
 FOLDER = "data_H6/H6_hyb_diss_2"
 FILE_PATH = "data_H6/inference.json"
-RESULT_FOLDER = "results/fig2/"
+RESULT_FOLDER = "results/fig2_H6/"
 num_chains = 25  # Number of chains
-chain_length = 4  # Number of H atoms per chain
+chain_length = 6  # Number of H atoms per chain
 bond_length_interval = 0.1
 device = 'cpu'
 
@@ -184,14 +185,15 @@ def nelec(**kargs):
 
 
 def initialize_data_structures(result_folder=RESULT_FOLDER):
-    methods = ["CASSCF", "HF", "B3LYP", "sto-3G", "basisNN", "ccpVDZ"]
+    methods = ["CASSCF", "HF", "B3LYP", "sto-3G", "basisNN", "ccpVDZ", "AVAS"]
     
     method_index = {
         'basisNN': 0,
         'CASSCF': 1,
         'HF': 2,
         "B3LYP": 3,
-        'sto-3G': 4
+        'sto-3G': 4,
+        'AVAS': 5
     }
     
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -340,6 +342,80 @@ def compute_basisNN_energies(data, result_folder = RESULT_FOLDER):
     print(f"Results saved to {result_folder}/E_l_data.json")
 
 
+
+def compute_avas_fci_energies(data, result_folder=RESULT_FOLDER):
+    """
+    Runs an RHF->AVAS->FCI calculation for each geometry
+    and saves the energies and L1 norms.
+    """
+    print("\n" + "="*60)
+    print("Running AVAS-FCI calculations...")
+    print("="*60)
+    
+    E_avas_l = []
+    l_avas_l = []
+    
+    with tqdm(total=len(data["pos"]), desc="Processing AVAS-FCI", dynamic_ncols=True) as pbar:
+        for pos, elements in zip(data["pos"], data["elements"]):
+            atom = [[el, tuple(c)] for el, c in zip(elements, pos)]
+            
+            # --- 1. Build molecule ---
+            mol = gto.M(atom=atom, basis='cc-pVDZ', spin=0, charge=0, verbose=0)
+            
+            # --- 2. Run RHF (needed for AVAS) ---
+            mf = scf.RHF(mol).run()
+            
+            # --- 3. Run AVAS to get active space ---
+            # This is the correct way to call AVAS
+            ao_labels = ["H 1s"]
+            ncas_avas, nelecas_avas, mo_avas = avas.kernel(mf, ao_labels, threshold=0.95)
+            ncas_avas=4
+            nelecas_avas=4
+            # --- 4. Get Hamiltonian in AVAS-MO basis ---
+            ham = Fermi_Ham()
+            ham.pyscf_init(atom=atom, basis='cc-pVDZ')
+            ham.calc_Ham_AO()
+            # Project AO integrals into the AVAS-MO basis
+            ham.calc_Ham_othonormalize(torch.tensor(mo_avas, device=device), ncut=ncas_avas)
+            
+            # --- 5. Run classical FCI on the small AVAS Hamiltonian ---
+            h1 = ham.int_1bd.detach().cpu().numpy()
+            g2 = ham.int_2bd.detach().cpu().numpy()
+            nele_tuple = (nelecas_avas // 2, nelecas_avas // 2)
+
+            fci_solver = DirectSpinFCI()
+            fci_solver.spin = 0
+            fci_solver.nroots = 1
+            e_ci, ci_vec = fci_solver.kernel(h1, g2, ncas_avas, nele_tuple)
+            
+            E_total = ham.Ham_const + float(e_ci)
+            E_avas_l.append(E_total)
+            
+            # --- 6. Calculate L1 norm (LambdaQ) ---
+            l_avas = float(LambdaQ(ham.Ham_const, ham.int_1bd, ham.int_2bd))
+            l_avas_l.append(l_avas)
+            
+            pbar.set_postfix({"AVAS_E": f"{E_total:.6f}"})
+            pbar.update(1)
+
+    # --- 7. Save results to the JSON file ---
+    with open(os.path.join(result_folder, "E_l_data.json"), "r") as f:
+        jdata = json.load(f)
+    
+    # Ensure the keys exist before trying to append
+    if "AVAS" not in jdata["energy_data"]:
+        jdata["energy_data"]['AVAS'] = []
+    if "AVAS" not in jdata["l_data"]:
+        jdata["l_data"]['AVAS'] = []
+        
+    jdata["energy_data"]['AVAS'] = E_avas_l
+    jdata["l_data"]['AVAS'] = l_avas_l
+    
+    with open(os.path.join(result_folder, "E_l_data.json"), "w") as f:
+        json.dump(jdata, f, indent=4)
+    print(f"AVAS-FCI results saved to {result_folder}/E_l_data.json")
+
+
 def collect_other_energies(name_l, folder=FOLDER, result_folder=RESULT_FOLDER):
     with open(os.path.join(result_folder, "E_l_data.json"), "r") as f:
         energy_data = json.load(f)
@@ -401,6 +477,8 @@ def main():
     
     # Compute basisNN energies
     compute_basisNN_energies(data)
+
+    compute_avas_fci_energies(data)
     
     # Collect energies from other methods
     collect_other_energies(name_l, FOLDER)
