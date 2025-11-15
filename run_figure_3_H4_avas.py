@@ -174,8 +174,8 @@ class PennyLaneSolverCASCI:
 
 # --- AVAS wrapper ---
 def run_avas_h1s(mol, mf_hf, threshold=0.95):
-    ao_labels = ["H 1s"]  # The orbitals you want to project onto
-    avas_obj = avas.AVAS(mf_hf, aolabels=ao_labels,threshold=threshold)  # pass aolabels here!
+    ao_labels = ["H 1s"]
+    avas_obj = avas.AVAS(mf_hf, aolabels=ao_labels,threshold=threshold)
     ncas_avas, nelecas_avas, mo_avas = avas_obj.kernel()
     print(f"AVAS selected {ncas_avas} orbitals with {nelecas_avas} electrons.")
     return mo_avas, 4, 4
@@ -236,6 +236,7 @@ def run_experiment(bond_length):
     # --- Save results ---
     results_dir = "results/fig3/Data3"
     ensure_dir(results_dir)
+
     results = {
         "bond_length": float(bond_length),
         "hf_vqe_casci_energy": float(E_hf_casci),
@@ -243,8 +244,19 @@ def run_experiment(bond_length):
         "avas_vqe_casci_energy": float(E_avas_casci),
         "hf_params": params_hf,
         "nn_params": params_nn,
-        "avas_params": params_avas
+        "avas_params": params_avas,
+        "energy_history": {
+            "hf":   mc_hf_casci.fcisolver.energy_history,
+            "nn":   mc_nn_casci.fcisolver.energy_history,
+            "avas": mc_avas_casci.fcisolver.energy_history,
+        },
+        "ci_vec_history": {
+            "hf":   mc_hf_casci.fcisolver.ci_vec_history,
+            "nn":   mc_nn_casci.fcisolver.ci_vec_history,
+            "avas": mc_avas_casci.fcisolver.ci_vec_history,
+        },
     }
+
 
     filename = f"{results_dir}/vqe_casci_results_bond({bond_length:.1f}).json"
     with open(filename, 'w') as f:
