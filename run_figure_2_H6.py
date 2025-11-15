@@ -369,8 +369,8 @@ def compute_avas_fci_energies(data, result_folder=RESULT_FOLDER):
             # This is the correct way to call AVAS
             ao_labels = ["H 1s"]
             ncas_avas, nelecas_avas, mo_avas = avas.kernel(mf, ao_labels, threshold=0.95)
-            ncas_avas=4
-            nelecas_avas=4
+            ncas_avas=6
+            nelecas_avas=6
             # --- 4. Get Hamiltonian in AVAS-MO basis ---
             ham = Fermi_Ham()
             ham.pyscf_init(atom=atom, basis='cc-pVDZ')
