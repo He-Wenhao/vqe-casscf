@@ -1,0 +1,86 @@
+
+
+******** <class 'pyscf.scf.hf.RHF'> ********
+method = RHF
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-09
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmpiz1804ep
+max_memory 4000 MB (current use 0 MB)
+Set gradient conv threshold to 3.16228e-05
+Initial guess from minao.
+init E= -40.1343084774385
+  HOMO = -0.442620540173514  LUMO = 0.13661111942825
+cycle= 1 E= -40.1799131091918  delta_E= -0.0456  |g|= 0.151  |ddm|= 1.61
+  HOMO = -0.518628190707222  LUMO = 0.192612739666518
+cycle= 2 E= -40.187117404789  delta_E= -0.0072  |g|= 0.0347  |ddm|= 0.115
+  HOMO = -0.517201783305772  LUMO = 0.196053439246407
+cycle= 3 E= -40.1876221156938  delta_E= -0.000505  |g|= 0.00398  |ddm|= 0.0345
+  HOMO = -0.515904777700138  LUMO = 0.196528141627617
+cycle= 4 E= -40.1876303437527  delta_E= -8.23e-06  |g|= 0.00142  |ddm|= 0.00615
+  HOMO = -0.516431569803348  LUMO = 0.19638064011702
+cycle= 5 E= -40.1876310116815  delta_E= -6.68e-07  |g|= 0.000175  |ddm|= 0.00189
+  HOMO = -0.516413366370338  LUMO = 0.196370617923218
+cycle= 6 E= -40.1876310334746  delta_E= -2.18e-08  |g|= 2.38e-05  |ddm|= 0.000556
+  HOMO = -0.516413460034819  LUMO = 0.19636783105561
+cycle= 7 E= -40.1876310338052  delta_E= -3.31e-10  |g|= 4.03e-06  |ddm|= 4.95e-05
+  HOMO = -0.516412504024861  LUMO = 0.196367933982367
+Extra cycle  E= -40.1876310338149  delta_E= -9.73e-12  |g|= 1.47e-06  |ddm|= 7.45e-06
+converged SCF energy = -40.1876310338149
+
+******** <class 'pyscf.mcscf.mc1step.CASSCF'> ********
+CAS (4e+4e, 8o), ncore = 1, nvir = 25
+max_cycle_macro = 50
+max_cycle_micro = 4
+conv_tol = 1e-07
+conv_tol_grad = None
+orbital rotation max_stepsize = 0.02
+orbital rotation threshold for CI restart = 0.01
+augmented hessian ah_max_cycle = 30
+augmented hessian ah_conv_tol = 1e-12
+augmented hessian ah_linear dependence = 1e-14
+augmented hessian ah_level shift = 1e-08
+augmented hessian ah_start_tol = 2.5
+augmented hessian ah_start_cycle = 3
+augmented hessian ah_grad_trust_region = 3
+kf_trust_region = 3
+kf_interval = 4
+ci_response_space = 4
+ci_grad_trust_region = 3
+with_dep4 0
+natorb = False
+canonicalization = True
+sorting_mo_energy = False
+ao2mo_level = 2
+chkfile = /var/folders/2g/30fq15_16yvcsfwpd5x9z9p80000gn/T/tmpiz1804ep
+max_memory 4000 MB (current use 0 MB)
+internal_rotation = False
+CASCI E = -40.2329514390757  S^2 = 0.0000000
+Set conv_tol_grad to 0.000316228
+macro iter   1 ( 21 JK    4 micro), CASSCF E = -40.2485330833291  dE = -1.55816443e-02  S^2 = 0.0000000
+               |grad[o]|=0.0396  |grad[c]|=0.0225  |ddm|=0.0106  |maxRot[o]|=0.314
+macro iter   2 ( 21 JK    4 micro), CASSCF E = -40.2618658152186  dE = -1.33327319e-02  S^2 = 0.0000000
+               |grad[o]|=0.0342  |grad[c]|=0.0154  |ddm|=0.00753  |maxRot[o]|=0.314
+macro iter   3 ( 16 JK    4 micro), CASSCF E = -40.2655787448595  dE = -3.71292964e-03  S^2 = 0.0000000
+               |grad[o]|=0.0171  |grad[c]|=0.0115  |ddm|=0.00419  |maxRot[o]|=0.194
+macro iter   4 (  3 JK    1 micro), CASSCF E = -40.2655810799059  dE = -2.33504640e-06  S^2 = 0.0000000
+               |grad[o]|=0.000611  |grad[c]|=0.000944  |ddm|=0.000162  |maxRot[o]|=0.00366
+macro iter   5 (  3 JK    1 micro), CASSCF E = -40.2655812879783  dE = -2.08072372e-07  S^2 = 0.0000000
+               |grad[o]|=0.000103  |grad[c]|=0.000303  |ddm|=4.77e-05  |maxRot[o]|=0.0011
+macro iter   6 (  3 JK    1 micro), CASSCF E = -40.2655813089715  dE = -2.09931770e-08  S^2 = 0.0000000
+               |grad[o]|=3.29e-05  |grad[c]|=9.67e-05  |ddm|=    0  |maxRot[o]|=0.000347
+1-step CASSCF converged in   6 macro ( 67 JK  15 micro) steps
+CASSCF canonicalization
+Density matrix diagonal elements [1.98556977 1.98134735 1.98026332 1.97866168 0.02047967 0.01851255
+ 0.01733057 0.01783509]
+CASSCF energy = -40.2655813089715
+CASCI E = -40.2655813089715  E(CI) = -17.7679691654570  S^2 = 0.0000000
